@@ -30,6 +30,19 @@ class Tools {
     EdgeInsetsGeometry? padding,
     IconData? icon,
   }) {
+    // Core metrics may be unavailable in unit/widget tests (or ultra-early
+    // calls before bootstrap) — fall back to constants instead of crashing.
+    final bool metricsReady = AppDimensions.padding != null;
+    final ShapeBorder effectiveShape = shape ??
+        RoundedRectangleBorder(
+          borderRadius: metricsReady
+              ? AppDimensions.borRadius(3)
+              : BorderRadius.circular(12),
+        );
+    final EdgeInsetsGeometry effectiveMargin =
+        margin ?? (metricsReady ? Space.all(1.5) : const EdgeInsets.all(12));
+    final EdgeInsetsGeometry effectivePadding =
+        padding ?? (metricsReady ? Space.all(1) : const EdgeInsets.all(12));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: icon == null
@@ -42,7 +55,9 @@ class Tools {
             : Row(
                 children: <Widget>[
                   Icon(icon, size: 20, color: textColor ?? AppColors.gold),
-                  Space.xf(0.75),
+                  metricsReady
+                      ? Space.xf(0.75)
+                      : const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       message,
@@ -57,10 +72,9 @@ class Tools {
         duration: duration,
         behavior: behavior,
         action: action,
-        shape: shape ??
-            RoundedRectangleBorder(borderRadius: AppDimensions.borRadius(3)),
-        margin: margin ?? Space.all(1.5),
-        padding: padding ?? Space.all(1),
+        shape: effectiveShape,
+        margin: effectiveMargin,
+        padding: effectivePadding,
       ),
     );
   }

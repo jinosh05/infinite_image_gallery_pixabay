@@ -3,6 +3,8 @@ import "package:dio/dio.dart";
 import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:infinite_image_gallery_pixabay/core/utils/network_check.dart";
+import "package:infinite_image_gallery_pixabay/features/detail/data/services/image_download_service.dart";
+import "package:infinite_image_gallery_pixabay/features/detail/presentation/cubit/download_cubit.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/data/datasources/gallery_remote_data_source.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/repositories/gallery_repository.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/use_cases/get_photos.dart";
@@ -49,5 +51,13 @@ void main() {
 
     expect(sl<GalleryBloc>(), isNotNull);
     expect(identical(sl<GalleryBloc>(), sl<GalleryBloc>()), isFalse);
+  });
+
+  test("resolves the detail download graph", () async {
+    await initDependencies();
+
+    expect(sl<ImageDownloadService>(), isNotNull);
+    expect(sl<DownloadCubit>(), isNotNull);
+    expect(identical(sl<DownloadCubit>(), sl<DownloadCubit>()), isFalse);
   });
 }

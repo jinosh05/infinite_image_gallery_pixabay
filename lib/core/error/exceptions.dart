@@ -25,3 +25,9 @@ class DownloadException implements Exception {
   const DownloadException([this.message = "Download error"]);
   final String message;
 }
+
+class PermissionException implements Exception {
+  const PermissionException(
+      [this.message = "Storage permission is required to save images."]);
+  final String message;
+}

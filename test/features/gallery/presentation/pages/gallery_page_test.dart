@@ -8,11 +8,15 @@ import "package:infinite_image_gallery_pixabay/core/constants/app_strings.dart";
 import "package:infinite_image_gallery_pixabay/core/error/failures.dart";
 import "package:infinite_image_gallery_pixabay/core/widgets/app_empty_view.dart";
 import "package:infinite_image_gallery_pixabay/core/widgets/app_error_view.dart";
+import "package:infinite_image_gallery_pixabay/features/detail/data/services/image_download_service.dart";
+import "package:infinite_image_gallery_pixabay/features/detail/presentation/cubit/download_cubit.dart";
+import "package:infinite_image_gallery_pixabay/features/detail/presentation/pages/detail_page.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/entities/photo.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/repositories/gallery_repository.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/bloc/gallery_bloc.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/pages/gallery_page.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/widgets/photo_tile.dart";
+import "package:infinite_image_gallery_pixabay/injection_container.dart";
 import "package:infinite_scroll_pagination/infinite_scroll_pagination.dart";
 import "package:mocktail/mocktail.dart";
 
@@ -32,6 +36,18 @@ Future<void> pumpFrames(
   }
 }
 
+/// Never-called stand-in so DetailPage can resolve its cubit via sl.
+/// Download behavior itself is covered in detail_page_test.dart.
+class _NoopDownloadService implements ImageDownloadService {
+  @override
+  Future<String> downloadToGallery(
+    String imageUrl, {
+    required void Function(double) onProgress,
+    String? fileName,
+  }) async =>
+      "noop.jpg";
+}
+
 void main() {
   late MockGetPhotos mockGetPhotos;
 
@@ -41,10 +57,20 @@ void main() {
 
   setUp(() {
     mockGetPhotos = MockGetPhotos();
+    // DetailPage resolves its DownloadCubit via sl on navigation.
+    sl.registerLazySingleton<ImageDownloadService>(
+      () => _NoopDownloadService(),
+    );
+    sl.registerFactory<DownloadCubit>(
+      () => DownloadCubit(service: sl<ImageDownloadService>()),
+    );
   });
 
-  Future<void> pumpGallery(WidgetTester tester) async {
-    await tester.pumpWidget(
+  tearDown(() async {
+    await sl.reset();
+  });
+
+  Future<void> pumpGallery(WidgetTester tester) async {    await tester.pumpWidget(
       MaterialApp(
         home: BlocProvider<GalleryBloc>(
           create: (_) => GalleryBloc(getPhotos: mockGetPhotos, perPage: 20),
@@ -179,7 +205,7 @@ void main() {
       expect(find.byType(CustomMasonryGrid), findsOneWidget);
     });
 
-    testWidgets("tile tap opens the preview", (WidgetTester tester) async {
+    testWidgets("tile tap opens the detail page", (WidgetTester tester) async {
       stubGalleryPages(
         mockGetPhotos,
         <int, List<Photo>>{1: samplePhotos(6)},
@@ -190,7 +216,8 @@ void main() {
       await tester.tap(find.byType(PhotoTile).first);
       await pumpFrames(tester, count: 6);
 
-      expect(find.byType(InteractiveViewer), findsOneWidget);
+      expect(find.byType(DetailPage), findsOneWidget);
+      expect(find.text(S.download), findsOneWidget);
     });
   });
 

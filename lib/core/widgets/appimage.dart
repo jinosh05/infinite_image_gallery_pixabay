@@ -72,6 +72,10 @@ class AppImage extends StatelessWidget {
         errorBuilder: (_, _, _) => placeholder(),
       );
     } else {
+      // memCacheWidth must be a finite positive int — unconstrained layouts
+      // (e.g. width: double.infinity) skip the hint instead of crashing.
+      final int? memWidth =
+          (w == null || !w.isFinite || w <= 0) ? null : (w * 2).round();
       resolved = CachedNetworkImage(
         imageUrl: imageUrl,
         width: w,
@@ -80,7 +84,7 @@ class AppImage extends StatelessWidget {
         color: color,
         fadeInDuration: const Duration(milliseconds: 250),
         fadeOutDuration: const Duration(milliseconds: 150),
-        memCacheWidth: w == null ? null : (w * 2).round(),
+        memCacheWidth: memWidth,
         placeholder: (_, _) => Shimmer.fromColors(
           baseColor: AppColors.greyMuted,
           highlightColor: Colors.white,

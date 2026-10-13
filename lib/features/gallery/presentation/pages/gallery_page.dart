@@ -3,6 +3,7 @@ import "package:custom_masonry_grid/custom_masonry_grid.dart";
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:infinite_image_gallery_pixabay/core/constants/app_strings.dart";
+import "package:infinite_image_gallery_pixabay/core/routes/app_routes.dart";
 import "package:infinite_image_gallery_pixabay/core/widgets/app_empty_view.dart";
 import "package:infinite_image_gallery_pixabay/core/widgets/app_error_view.dart";
 import "package:infinite_image_gallery_pixabay/core/widgets/app_loading.dart";
@@ -10,9 +11,9 @@ import "package:infinite_image_gallery_pixabay/features/gallery/domain/entities/
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/bloc/gallery_bloc.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/bloc/gallery_event.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/bloc/gallery_state.dart";
+import "package:infinite_image_gallery_pixabay/features/detail/presentation/pages/detail_page.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/widgets/category_filter_row.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/widgets/gallery_search_field.dart";
-import "package:infinite_image_gallery_pixabay/features/gallery/presentation/widgets/photo_preview_dialog.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/widgets/photo_tile.dart";
 import "package:infinite_scroll_pagination/infinite_scroll_pagination.dart";
 
@@ -164,6 +165,12 @@ class _GalleryPageState extends State<GalleryPage> {
     );
   }
 
+  void _openDetail(BuildContext context, Photo item) {
+    // Favorite wiring lands in Phase 4 (FavoritesBloc); DetailPage keeps
+    // the same seam as PhotoTile until then.
+    AppRoutes.push(context, DetailPage(photo: item));
+  }
+
   Widget _buildGrid(
     PagingState<int, Photo> state,
     NextPageCallback fetchNextPage,
@@ -182,7 +189,7 @@ class _GalleryPageState extends State<GalleryPage> {
           itemBuilder: (BuildContext context, Photo item, int index) =>
               PhotoTile(
             photo: item,
-            onTap: () => PhotoPreviewDialog.show(context, item),
+            onTap: () => _openDetail(context, item),
           ),
           firstPageProgressIndicatorBuilder: (_) => const AppLoadingGrid(),
           firstPageErrorIndicatorBuilder: (_) => AppErrorView(
@@ -258,7 +265,7 @@ class _GalleryPageState extends State<GalleryPage> {
             PhotoTile(
               photo: item,
               aspectRatio: _masonryAspect(item),
-              onTap: () => PhotoPreviewDialog.show(context, item),
+              onTap: () => _openDetail(context, item),
             ),
         ],
         footer: _masonryFooter(state, fetchNextPage),

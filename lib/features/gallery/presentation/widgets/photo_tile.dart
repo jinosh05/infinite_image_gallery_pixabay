@@ -1,5 +1,6 @@
 // Path: features/gallery/presentation/widgets/photo_tile.dart
 import "package:flutter/material.dart";
+import "package:infinite_image_gallery_pixabay/core/utils/format_utils.dart";
 import "package:infinite_image_gallery_pixabay/core/widgets/appimage.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/entities/photo.dart";
 
@@ -68,14 +69,14 @@ class PhotoTile extends StatelessWidget {
                 const Icon(Icons.favorite, size: 12, color: Colors.white),
                 const SizedBox(width: 4),
                 Text(
-                  _compact(photo.likes),
+                  compactCount(photo.likes),
                   style: const TextStyle(color: Colors.white, fontSize: 11),
                 ),
                 const SizedBox(width: 10),
                 const Icon(Icons.visibility, size: 12, color: Colors.white),
                 const SizedBox(width: 4),
                 Text(
-                  _compact(photo.views),
+                  compactCount(photo.views),
                   style: const TextStyle(color: Colors.white, fontSize: 11),
                 ),
               ],
@@ -113,7 +114,4 @@ class PhotoTile extends StatelessWidget {
 
     return GestureDetector(onTap: onTap, child: content);
   }
-
-  static String _compact(int n) =>
-      n >= 1000 ? "${(n / 1000).toStringAsFixed(1)}k" : "$n";
 }

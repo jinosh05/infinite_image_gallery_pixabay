@@ -7,6 +7,8 @@ import "package:infinite_image_gallery_pixabay/core/utils/network_check.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/data/datasources/gallery_remote_data_source.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/data/repositories/gallery_repository_impl.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/repositories/gallery_repository.dart";
+import "package:infinite_image_gallery_pixabay/features/detail/data/services/image_download_service.dart";
+import "package:infinite_image_gallery_pixabay/features/detail/presentation/cubit/download_cubit.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/use_cases/get_photos.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/bloc/gallery_bloc.dart";
 import "package:shared_preferences/shared_preferences.dart";
@@ -44,5 +46,14 @@ Future<void> initDependencies() async {
       getPhotos: sl<GetPhotos>(),
       perPage: EnvConfig.defaultPerPage,
     ),
+  );
+
+  // ---- Detail feature (Phase 3) ----
+  sl.registerLazySingleton<ImageDownloadService>(
+    () => ImageDownloadServiceImpl(dio: sl<Dio>()),
+  );
+  // Factory: DetailPage owns its Cubit instance (disposed with the page).
+  sl.registerFactory<DownloadCubit>(
+    () => DownloadCubit(service: sl<ImageDownloadService>()),
   );
 }

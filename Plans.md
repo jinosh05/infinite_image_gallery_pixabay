@@ -158,11 +158,33 @@ lib/
 
 ---
 
-## 6. Phase 3 — Detail screen: description + actions (~2 h)
+## 6. Phase 3 — Detail screen: description + actions ✅ DONE
 
-1. `DetailPage(photo)`: full `Hero` image (`largeImageURL`, `InteractiveViewer` pinch-zoom), scrollable meta sheet — **description block (assignment-required)**: `tags` as chips + `user` attribution + stats row (views/likes/downloads) + resolution (`imageWidth×imageHeight`) + "View on Pixabay" (`pageURL` via `url_launcher` — add dep only here if needed).
-2. Action bar: Favorite toggle (dispatches `FavoritesBloc`), Download (→ `DownloadCubit`, shows linear progress 0→1 in button), Share (`Tools.shareImageUrl`), set-as/fallback if `largeImageURL` missing.
-3. `DownloadCubit` + `DownloadService` (data): `Dio.download(url, tmpPath, onReceiveProgress)` → `ImageGallerySaverPlus.saveFile` (or `saveImage` bytes path); pre-flight `PermissionHelper.ensureSavePermission()` → `PermissionFailure` snackbar if denied; emit `DownloadProgress(p)` → `DownloadSuccess`/`DownloadFailure`. Gate: real-device save appears in gallery; progress bar moves; denied permission shows `S.errorPermission`.
+1. `DetailPage(photo)` (entity passed, no refetch): black Hero viewer
+   (`largeImageURL` → fallback chain, `InteractiveViewer` pinch-zoom),
+   scrollable meta sheet — **description block**: tag chips + `user`
+   attribution + views/likes/downloads stats + resolution + "View on
+   Pixabay" (`pageURL` via `url_launcher`, try/catch → snackbar).
+2. Action bar: favorite toggle seam (Phase 4 wires `FavoritesBloc`),
+   Download → `DownloadCubit` (linear progress 0→1 in the bottom bar,
+   success/fail snackbars), Share (`Tools.shareImageUrl` + caption,
+   try/catch → snackbar). Gallery tile tap now pushes `DetailPage`
+   (interim preview dialog deleted).
+3. `ImageDownloadService` (data) + `DownloadCubit`: permission pre-flight
+   (`PermissionHelper` → `PermissionException`), `Dio.download` with
+   `onReceiveProgress` to tmp (`path_provider`) → `saveFile`
+   (accepts map/`true`/path results); concurrent taps ignored.
+   Platform entries added: Android `READ_MEDIA_IMAGES` + legacy storage
+   (maxSdk 32) + `requestLegacyExternalStorage`; iOS photo-library keys.
+   Gate: real-device save + moving progress bar; denied permission shows
+   `S.errorPermission`. (Device verification pending — unit/widget green.)
+4. Tests: cubit (progress/success/permission/download/generic/concurrency)
+   + 7 detail widget tests + retargeted gallery tap test + DI graph test.
+   Gate: `flutter test` green (64 tests), `flutter analyze` clean. ✅ DONE
+   Test-forced fixes: `AppImage.memCacheWidth` guards non-finite widths;
+   `Tools.showSnackBar` no longer assumes bootstrap ran (fallback metrics);
+   plugin calls (share/url) are presence/crash-freedom-tested only —
+   untestable without platform plugins.
 
 ---
 
@@ -195,7 +217,7 @@ lib/
 - [ ] Phase 0 verify: `pub get` + `analyze` clean (foundation already written)
 - [x] Phase 1: data+domain + get_it DI + unit tests green (32 tests)
 - [x] Phase 2: gallery paging/search/filter/masonry/hero + widget tests (51 tests)
-- [ ] Phase 3: detail + download progress + share
+- [x] Phase 3: detail + download progress + share (64 tests)
 - [ ] Phase 4: favorites persistence + sync
 - [ ] Phase 5: shell + theme + global error polish
 - [ ] Phase 6: full tests + README + APK + screenshots
