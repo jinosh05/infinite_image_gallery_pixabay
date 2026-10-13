@@ -43,8 +43,7 @@ void main() {
     });
   });
 
-  group("PhotoModel.toEntity", () {
-    test("detaches an equal pure Photo entity", () {
+  group("PhotoModel.toEntity", () {    test("detaches an equal pure Photo entity", () {
       final PhotoModel model = PhotoModel.fromJson(sampleHitJson());
       final Photo entity = model.toEntity();
 
@@ -53,6 +52,18 @@ void main() {
       expect(entity.id, model.id);
       expect(entity.largeImageURL, model.largeImageURL);
       expect(entity.likes, model.likes);
+    });
+  });
+
+  group("PhotoModel.fromEntity", () {
+    test("round-trips entity → model → json", () {
+      final Photo entity =
+          PhotoModel.fromJson(sampleHitJson()).toEntity();
+      final PhotoModel model = PhotoModel.fromEntity(entity);
+
+      // Equatable is runtime-type-strict, so compare via detached entities.
+      expect(model.toEntity(), entity);
+      expect(PhotoModel.fromJson(model.toJson()).toEntity(), entity);
     });
   });
 

@@ -12,17 +12,15 @@ import "package:infinite_image_gallery_pixabay/features/gallery/presentation/blo
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/bloc/gallery_event.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/bloc/gallery_state.dart";
 import "package:infinite_image_gallery_pixabay/features/detail/presentation/pages/detail_page.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/presentation/bloc/favorites_bloc.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/presentation/bloc/favorites_event.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/presentation/pages/favorites_page.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/presentation/widgets/favorites_listener.dart";
+import "package:infinite_image_gallery_pixabay/features/gallery/presentation/gallery_columns.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/widgets/category_filter_row.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/widgets/gallery_search_field.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/widgets/photo_tile.dart";
 import "package:infinite_scroll_pagination/infinite_scroll_pagination.dart";
-
-/// Responsive columns for the fixed grid (pure — unit-testable via width).
-int galleryCrossAxisCount(double width) {
-  if (width < 360) return 2;
-  if (width < 720) return 3;
-  return 4;
-}
 
 /// Error carrier from the Bloc bridge into the paging controller.
 /// Must extend [Exception]: v5 rethrows non-Exceptions (controller line ~102).
@@ -104,13 +102,19 @@ class _GalleryPageState extends State<GalleryPage> {
             icon: Icon(_masonry ? Icons.grid_view : Icons.dashboard_outlined),
             onPressed: () => setState(() => _masonry = !_masonry),
           ),
-          // TODO(phase4): favorites screen action (FavoritesBloc).
+          IconButton(
+            tooltip: S.favoritesTitle,
+            icon: const Icon(Icons.favorite_border),
+            onPressed: () =>
+                AppRoutes.push(context, const FavoritesPage()),
+          ),
           // TODO(phase5): theme toggle (ThemeCubit).
         ],
       ),
-      body: BlocListener<GalleryBloc, GalleryState>(
-        // Filter resets are the only `initial` emissions after mount;
-        // result emissions are success/failure and must not refresh.
+      body: FavoritesMessenger(
+        child: BlocListener<GalleryBloc, GalleryState>(
+          // Filter resets are the only `initial` emissions after mount;
+          // result emissions are success/failure and must not refresh.
         listenWhen: (GalleryState prev, GalleryState curr) =>
             curr.status == GalleryStatus.initial &&
             (curr.query != prev.query || curr.category != prev.category),
@@ -161,13 +165,12 @@ class _GalleryPageState extends State<GalleryPage> {
             ),
           ],
         ),
+        ),
       ),
     );
   }
 
   void _openDetail(BuildContext context, Photo item) {
-    // Favorite wiring lands in Phase 4 (FavoritesBloc); DetailPage keeps
-    // the same seam as PhotoTile until then.
     AppRoutes.push(context, DetailPage(photo: item));
   }
 
@@ -187,7 +190,7 @@ class _GalleryPageState extends State<GalleryPage> {
         ),
         builderDelegate: PagedChildBuilderDelegate<Photo>(
           itemBuilder: (BuildContext context, Photo item, int index) =>
-              PhotoTile(
+              _GalleryTile(
             photo: item,
             onTap: () => _openDetail(context, item),
           ),
@@ -262,7 +265,7 @@ class _GalleryPageState extends State<GalleryPage> {
             galleryCrossAxisCount(MediaQuery.sizeOf(context).width),
         items: <Widget>[
           for (final Photo item in items)
-            PhotoTile(
+            _GalleryTile(
               photo: item,
               aspectRatio: _masonryAspect(item),
               onTap: () => _openDetail(context, item),
@@ -315,5 +318,35 @@ class _GalleryPageState extends State<GalleryPage> {
       return error.message;
     }
     return S.errorGeneric;
+  }
+}
+
+/// Favorite-aware tile: subscribes to ONE photo's favorite flag, so toggles
+/// rebuild only this tile — never the grid (context.select is illegal
+/// directly inside sliver item builders).
+class _GalleryTile extends StatelessWidget {
+  const _GalleryTile({
+    required this.photo,
+    required this.onTap,
+    this.aspectRatio,
+  });
+
+  final Photo photo;
+  final VoidCallback onTap;
+  final double? aspectRatio;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isFavorite = context.select<FavoritesBloc, bool>(
+      (FavoritesBloc b) => b.state.ids.contains(photo.id),
+    );
+    return PhotoTile(
+      photo: photo,
+      aspectRatio: aspectRatio,
+      isFavorite: isFavorite,
+      onFavoriteToggle: () =>
+          context.read<FavoritesBloc>().add(FavoriteToggled(photo)),
+      onTap: onTap,
+    );
   }
 }

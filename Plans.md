@@ -188,11 +188,31 @@ lib/
 
 ---
 
-## 7. Phase 4 — Favorites + persistence (~1–2 h)
+## 7. Phase 4 — Favorites + persistence ✅ DONE
 
-1. `FavoritesRepository` contract + impl over `SharedPreferences` key `favorite_photos_v1`: `getFavorites()`, `toggle(photo)`, `isFavorite(id)`, `clear()` — store `List<String>` of `photoModel.toJson()`; decode defensively (skip corrupt entries).
-2. `FavoritesBloc` (global, provided in `app.dart` above `MaterialApp`): loads on start; events `Toggled(photo)`, `Loaded`, `Cleared`; state `{ids:Set<int>, photos:List<Photo>}`; emits snackbar messages via listener (`favoriteAdded/Removed`).
-3. `FavoritesPage`: grid of saved photos (reuse `PhotoTile`), `AppEmptyView` when empty, unfavorite inline, tap → detail. Gate: favorite → kill app → relaunch → still favorited; grid heart and favorites screen never disagree.
+1. `FavoritesRepository` contract + impl over `SharedPreferences`
+   (`favorite_photos_v1` JSON list): `getFavorites`, `toggleFavorite`
+   (record `ToggleResult = ({photos, isFavorite})`), `clearFavorites`;
+   corrupt entries skipped, models detach via `toEntity`/`fromEntity`.
+2. `FavoritesBloc` (global singleton ABOVE `MaterialApp`, `Started` at
+   launch): `Toggled`/`Cleared` announce via one-shot `message`
+   (`favoriteAdded/Removed/Cleared`), consumed by `FavoritesMessenger`
+   (single snackbar site, no per-screen listeners).
+3. `FavoritesPage`: saved grid (shared `galleryCrossAxisCount` + `PhotoTile`),
+   `AppEmptyView` when empty, inline unfavorite, tap → `DetailPage`,
+   clear-all with confirm dialog; failure → `AppErrorView` + retry.
+4. Seams lit up: gallery hearts (`_GalleryTile` subscribes per-photo so only
+   the tile rebuilds), detail star (self-wired), AppBar favorites icon.
+   Gate: kill → relaunch → still favorited (SharedPreferences); grid heart
+   and favorites screen share one bloc. ✅ DONE (device restart round-trip
+   to verify on hardware)
+5. Tests: data source (round-trip/corrupt/persist) + repository
+   (add/remove/clear/failure) + bloc (load/toggle/clear/consume) + page
+   (empty/grid/unfavorite/clear-confirm/failure/tap) + gallery heart +
+   detail star + DI singletons. `flutter test` green (87), analyze clean.
+   Test-forced fixes: `context.select` extracted out of sliver builders
+   (`_GalleryTile`); providers moved above `MaterialApp` in tests too;
+   `AppEmptyView`/`AppErrorView` bootstrap-null-safe.
 
 ---
 
@@ -218,7 +238,7 @@ lib/
 - [x] Phase 1: data+domain + get_it DI + unit tests green (32 tests)
 - [x] Phase 2: gallery paging/search/filter/masonry/hero + widget tests (51 tests)
 - [x] Phase 3: detail + download progress + share (64 tests)
-- [ ] Phase 4: favorites persistence + sync
+- [x] Phase 4: favorites persistence + sync (87 tests)
 - [ ] Phase 5: shell + theme + global error polish
 - [ ] Phase 6: full tests + README + APK + screenshots
 

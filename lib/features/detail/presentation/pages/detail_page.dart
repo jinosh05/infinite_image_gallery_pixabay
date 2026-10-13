@@ -7,50 +7,36 @@ import "package:infinite_image_gallery_pixabay/core/utils/tools.dart";
 import "package:infinite_image_gallery_pixabay/core/widgets/appimage.dart";
 import "package:infinite_image_gallery_pixabay/features/detail/presentation/cubit/download_cubit.dart";
 import "package:infinite_image_gallery_pixabay/features/detail/presentation/cubit/download_state.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/presentation/bloc/favorites_bloc.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/presentation/bloc/favorites_event.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/presentation/widgets/favorites_listener.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/entities/photo.dart";
 import "package:infinite_image_gallery_pixabay/injection_container.dart";
 import "package:url_launcher/url_launcher.dart";
 
 /// Image detail: Hero image (pinch-zoom) + description block + actions.
 ///
-/// Receives the [Photo] entity — no refetch. Favorite stays a seam
-/// ([onFavoriteToggle]/[isFavorite]) until Phase 4 wires `FavoritesBloc`,
-/// mirroring [PhotoTile].
+/// Receives the [Photo] entity — no refetch. Favorite + download state come
+/// from the global [FavoritesBloc] and a page-scoped [DownloadCubit];
+/// toggle feedback flows through [FavoritesMessenger].
 class DetailPage extends StatelessWidget {
-  const DetailPage({
-    required this.photo,
-    super.key,
-    this.isFavorite = false,
-    this.onFavoriteToggle,
-  });
+  const DetailPage({required this.photo, super.key});
 
   final Photo photo;
-  final bool isFavorite;
-  final VoidCallback? onFavoriteToggle;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider<DownloadCubit>(
       create: (_) => sl<DownloadCubit>(),
-      child: _DetailView(
-        photo: photo,
-        isFavorite: isFavorite,
-        onFavoriteToggle: onFavoriteToggle,
-      ),
+      child: _DetailView(photo: photo),
     );
   }
 }
 
 class _DetailView extends StatelessWidget {
-  const _DetailView({
-    required this.photo,
-    required this.isFavorite,
-    required this.onFavoriteToggle,
-  });
+  const _DetailView({required this.photo});
 
   final Photo photo;
-  final bool isFavorite;
-  final VoidCallback? onFavoriteToggle;
 
   String get _heroTag => "photo-${photo.id}";
 
@@ -83,17 +69,20 @@ class _DetailView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final TextTheme text = Theme.of(context).textTheme;
+    final bool isFavorite = context.select<FavoritesBloc, bool>(
+      (FavoritesBloc b) => b.state.ids.contains(photo.id),
+    );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(S.detailTitle),
-        actions: <Widget>[
-          IconButton(
-            tooltip: S.share,
-            icon: const Icon(Icons.share_outlined),
-            onPressed: () => _onShare(context),
-          ),
-          if (onFavoriteToggle != null)
+    return FavoritesMessenger(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text(S.detailTitle),
+          actions: <Widget>[
+            IconButton(
+              tooltip: S.share,
+              icon: const Icon(Icons.share_outlined),
+              onPressed: () => _onShare(context),
+            ),
             IconButton(
               tooltip: isFavorite
                   ? "Remove from favorites"
@@ -101,124 +90,128 @@ class _DetailView extends StatelessWidget {
               icon: Icon(
                 isFavorite ? Icons.favorite : Icons.favorite_border,
               ),
-              onPressed: onFavoriteToggle,
-            ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Container(
-              color: Colors.black,
-              child: Hero(
-                tag: _heroTag,
-                child: InteractiveViewer(
-                  child: AppImage(
-                    imageUrl: photo.detailImageUrl,
-                    fit: BoxFit.contain,
-                    height: MediaQuery.sizeOf(context).height * 0.45,
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  // Description block (assignment requirement): tags +
-                  // attribution + stats + resolution + source link.
-                  if (photo.tagList.isNotEmpty)
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: <Widget>[
-                        for (final String tag in photo.tagList)
-                          Chip(label: Text(tag)),
-                      ],
-                    ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: <Widget>[
-                      const Icon(Icons.person_outline, size: 16),
-                      const SizedBox(width: 6),
-                      Text(
-                        "${S.byAuthor} ${photo.user.isEmpty ? "unknown" : photo.user}",
-                        style: text.bodyMedium,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: <Widget>[
-                      _Stat(
-                        icon: Icons.visibility_outlined,
-                        value: compactCount(photo.views),
-                        label: S.views,
-                      ),
-                      const SizedBox(width: 20),
-                      _Stat(
-                        icon: Icons.favorite_border,
-                        value: compactCount(photo.likes),
-                        label: S.likes,
-                      ),
-                      const SizedBox(width: 20),
-                      _Stat(
-                        icon: Icons.download_outlined,
-                        value: compactCount(photo.downloads),
-                        label: S.downloads,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    "${photo.imageWidth} × ${photo.imageHeight}",
-                    style: text.bodySmall,
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed:
-                        photo.pageURL.isEmpty ? null : () => _onOpenPixabay(context),
-                    icon: const Icon(Icons.open_in_new, size: 16),
-                    label: const Text("View on Pixabay"),
-                  ),
-                ],
-              ),
+              onPressed: () => context
+                  .read<FavoritesBloc>()
+                  .add(FavoriteToggled(photo)),
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: BlocConsumer<DownloadCubit, DownloadState>(
-            listener: (BuildContext context, DownloadState state) {
-              if (state.status == DownloadStatus.success) {
-                Tools.showSuccess(context, S.downloadSuccess);
-              } else if (state.status == DownloadStatus.failure) {
-                Tools.showError(context, state.errorMessage);
-              }
-            },
-            builder: (BuildContext context, DownloadState state) {
-              if (state.status == DownloadStatus.inProgress) {
-                final int pct = (state.progress * 100).round();
-                return Column(
-                  mainAxisSize: MainAxisSize.min,
+        body: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Container(
+                color: Colors.black,
+                child: Hero(
+                  tag: _heroTag,
+                  child: InteractiveViewer(
+                    child: AppImage(
+                      imageUrl: photo.detailImageUrl,
+                      fit: BoxFit.contain,
+                      height: MediaQuery.sizeOf(context).height * 0.45,
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    LinearProgressIndicator(value: state.progress),
-                    const SizedBox(height: 8),
-                    Text("${S.downloading} $pct%"),
+                    // Description block (assignment requirement): tags +
+                    // attribution + stats + resolution + source link.
+                    if (photo.tagList.isNotEmpty)
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: <Widget>[
+                          for (final String tag in photo.tagList)
+                            Chip(label: Text(tag)),
+                        ],
+                      ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: <Widget>[
+                        const Icon(Icons.person_outline, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          "${S.byAuthor} ${photo.user.isEmpty ? "unknown" : photo.user}",
+                          style: text.bodyMedium,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: <Widget>[
+                        _Stat(
+                          icon: Icons.visibility_outlined,
+                          value: compactCount(photo.views),
+                          label: S.views,
+                        ),
+                        const SizedBox(width: 20),
+                        _Stat(
+                          icon: Icons.favorite_border,
+                          value: compactCount(photo.likes),
+                          label: S.likes,
+                        ),
+                        const SizedBox(width: 20),
+                        _Stat(
+                          icon: Icons.download_outlined,
+                          value: compactCount(photo.downloads),
+                          label: S.downloads,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      "${photo.imageWidth} × ${photo.imageHeight}",
+                      style: text.bodySmall,
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: photo.pageURL.isEmpty
+                          ? null
+                          : () => _onOpenPixabay(context),
+                      icon: const Icon(Icons.open_in_new, size: 16),
+                      label: const Text("View on Pixabay"),
+                    ),
                   ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: BlocConsumer<DownloadCubit, DownloadState>(
+              listener: (BuildContext context, DownloadState state) {
+                if (state.status == DownloadStatus.success) {
+                  Tools.showSuccess(context, S.downloadSuccess);
+                } else if (state.status == DownloadStatus.failure) {
+                  Tools.showError(context, state.errorMessage);
+                }
+              },
+              builder: (BuildContext context, DownloadState state) {
+                if (state.status == DownloadStatus.inProgress) {
+                  final int pct = (state.progress * 100).round();
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      LinearProgressIndicator(value: state.progress),
+                      const SizedBox(height: 8),
+                      Text("${S.downloading} $pct%"),
+                    ],
+                  );
+                }
+                return FilledButton.icon(
+                  onPressed: () =>
+                      context.read<DownloadCubit>().download(photo),
+                  icon: const Icon(Icons.download_outlined),
+                  label: const Text(S.download),
                 );
-              }
-              return FilledButton.icon(
-                onPressed: () =>
-                    context.read<DownloadCubit>().download(photo),
-                icon: const Icon(Icons.download_outlined),
-                label: const Text(S.download),
-              );
-            },
+              },
+            ),
           ),
         ),
       ),

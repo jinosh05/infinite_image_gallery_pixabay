@@ -9,6 +9,10 @@ import "package:infinite_image_gallery_pixabay/features/gallery/data/repositorie
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/repositories/gallery_repository.dart";
 import "package:infinite_image_gallery_pixabay/features/detail/data/services/image_download_service.dart";
 import "package:infinite_image_gallery_pixabay/features/detail/presentation/cubit/download_cubit.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/data/datasources/favorites_local_data_source.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/data/repositories/favorites_repository_impl.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/domain/repositories/favorites_repository.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/presentation/bloc/favorites_bloc.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/use_cases/get_photos.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/bloc/gallery_bloc.dart";
 import "package:shared_preferences/shared_preferences.dart";
@@ -55,5 +59,16 @@ Future<void> initDependencies() async {
   // Factory: DetailPage owns its Cubit instance (disposed with the page).
   sl.registerFactory<DownloadCubit>(
     () => DownloadCubit(service: sl<ImageDownloadService>()),
+  );
+
+  // ---- Favorites feature (Phase 4; global singleton above MaterialApp) ----
+  sl.registerLazySingleton<FavoritesLocalDataSource>(
+    () => FavoritesLocalDataSourceImpl(prefs: sl<SharedPreferences>()),
+  );
+  sl.registerLazySingleton<FavoritesRepository>(
+    () => FavoritesRepositoryImpl(local: sl<FavoritesLocalDataSource>()),
+  );
+  sl.registerLazySingleton<FavoritesBloc>(
+    () => FavoritesBloc(repository: sl<FavoritesRepository>()),
   );
 }

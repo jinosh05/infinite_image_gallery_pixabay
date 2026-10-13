@@ -1,6 +1,9 @@
 // Shared doubles + stub helpers for gallery presentation tests.
 import "package:dartz/dartz.dart";
 import "package:infinite_image_gallery_pixabay/core/error/failures.dart";
+import "package:infinite_image_gallery_pixabay/features/detail/data/services/image_download_service.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/data/datasources/favorites_local_data_source.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/domain/repositories/favorites_repository.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/data/models/photo_model.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/entities/photo.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/entities/photo_page.dart";
@@ -11,6 +14,24 @@ import "package:mocktail/mocktail.dart";
 import "gallery_fixtures.dart";
 
 class MockGetPhotos extends Mock implements GetPhotos {}
+
+class MockFavoritesRepository extends Mock implements FavoritesRepository {}
+
+class MockFavoritesLocalDataSource extends Mock
+    implements FavoritesLocalDataSource {}
+
+/// Stand-in download service so pages can resolve their cubit via sl
+/// without touching platform plugins. Real download behavior is covered
+/// in detail_page_test.dart with a mocked service.
+class NoopImageDownloadService implements ImageDownloadService {
+  @override
+  Future<String> downloadToGallery(
+    String imageUrl, {
+    required void Function(double) onProgress,
+    String? fileName,
+  }) async =>
+      "noop.jpg";
+}
 
 List<Photo> samplePhotos(int count, {int startId = 1}) =>
     List<Photo>.generate(

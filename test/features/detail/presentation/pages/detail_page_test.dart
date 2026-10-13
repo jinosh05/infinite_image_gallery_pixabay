@@ -1,19 +1,25 @@
 // Path: test/features/detail/presentation/pages/detail_page_test.dart
 import "dart:async";
 
+import "package:dartz/dartz.dart";
 import "package:flutter/material.dart";
+import "package:flutter_bloc/flutter_bloc.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:infinite_image_gallery_pixabay/core/constants/app_strings.dart";
 import "package:infinite_image_gallery_pixabay/core/error/exceptions.dart";
+import "package:infinite_image_gallery_pixabay/core/error/failures.dart";
 import "package:infinite_image_gallery_pixabay/features/detail/data/services/image_download_service.dart";
 import "package:infinite_image_gallery_pixabay/features/detail/presentation/cubit/download_cubit.dart";
 import "package:infinite_image_gallery_pixabay/features/detail/presentation/pages/detail_page.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/domain/repositories/favorites_repository.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/presentation/bloc/favorites_bloc.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/data/models/photo_model.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/entities/photo.dart";
 import "package:infinite_image_gallery_pixabay/injection_container.dart";
 import "package:mocktail/mocktail.dart";
 
 import "../../../gallery/gallery_fixtures.dart";
+import "../../../gallery/test_doubles.dart";
 
 class MockImageDownloadService extends Mock implements ImageDownloadService {}
 
@@ -32,14 +38,22 @@ Future<void> pumpFrames(
 
 void main() {
   late MockImageDownloadService mockService;
+  late MockFavoritesRepository mockFavRepo;
 
   setUpAll(() {
     registerFallbackValue("");
     registerFallbackValue(_noopProgress);
+    registerFallbackValue(
+      PhotoModel.fromJson(sampleHitJson()).toEntity(),
+    );
   });
 
   setUp(() {
     mockService = MockImageDownloadService();
+    mockFavRepo = MockFavoritesRepository();
+    when(() => mockFavRepo.getFavorites()).thenAnswer(
+      (_) async => const Right<Failure, List<Photo>>(<Photo>[]),
+    );
     sl.registerLazySingleton<ImageDownloadService>(() => mockService);
     sl.registerFactory<DownloadCubit>(
       () => DownloadCubit(service: sl<ImageDownloadService>()),
@@ -55,7 +69,10 @@ void main() {
 
   Future<void> pumpDetail(WidgetTester tester, Photo photo) async {
     await tester.pumpWidget(
-      MaterialApp(home: DetailPage(photo: photo)),
+      BlocProvider<FavoritesBloc>(
+        create: (_) => FavoritesBloc(repository: mockFavRepo),
+        child: MaterialApp(home: DetailPage(photo: photo)),
+      ),
     );
     await pumpFrames(tester);
   }
@@ -80,11 +97,24 @@ void main() {
       expect(find.byIcon(Icons.share_outlined), findsOneWidget);
     });
 
-    testWidgets("hides favorite without a toggle handler",
+    testWidgets("star reflects favorite state and toggles",
         (WidgetTester tester) async {
-      await pumpDetail(tester, samplePhoto());
+      when(() => mockFavRepo.toggleFavorite(any())).thenAnswer(
+        (_) async => Right<Failure, ToggleResult>((
+          photos: <Photo>[samplePhoto()],
+          isFavorite: true,
+        )),
+      );
 
-      expect(find.byTooltip("Add to favorites"), findsNothing);
+      await pumpDetail(tester, samplePhoto());
+      expect(find.byTooltip("Add to favorites"), findsOneWidget);
+
+      await tester.tap(find.byTooltip("Add to favorites"));
+      await pumpFrames(tester);
+
+      verify(() => mockFavRepo.toggleFavorite(any())).called(1);
+      expect(find.byTooltip("Remove from favorites"), findsOneWidget);
+      expect(find.text(S.favoriteAdded), findsOneWidget);
     });
   });
 

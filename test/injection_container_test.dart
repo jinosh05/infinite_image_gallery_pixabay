@@ -5,6 +5,9 @@ import "package:flutter_test/flutter_test.dart";
 import "package:infinite_image_gallery_pixabay/core/utils/network_check.dart";
 import "package:infinite_image_gallery_pixabay/features/detail/data/services/image_download_service.dart";
 import "package:infinite_image_gallery_pixabay/features/detail/presentation/cubit/download_cubit.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/data/datasources/favorites_local_data_source.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/domain/repositories/favorites_repository.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/presentation/bloc/favorites_bloc.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/data/datasources/gallery_remote_data_source.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/repositories/gallery_repository.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/use_cases/get_photos.dart";
@@ -59,5 +62,17 @@ void main() {
     expect(sl<ImageDownloadService>(), isNotNull);
     expect(sl<DownloadCubit>(), isNotNull);
     expect(identical(sl<DownloadCubit>(), sl<DownloadCubit>()), isFalse);
+  });
+
+  test("resolves the favorites graph as singletons", () async {
+    await initDependencies();
+
+    expect(sl<FavoritesLocalDataSource>(), isNotNull);
+    expect(sl<FavoritesRepository>(), isNotNull);
+    expect(sl<FavoritesBloc>(), isNotNull);
+    expect(
+      identical(sl<FavoritesBloc>(), sl<FavoritesBloc>()),
+      isTrue,
+    );
   });
 }

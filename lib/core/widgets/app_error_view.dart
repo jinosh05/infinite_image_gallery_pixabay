@@ -1,5 +1,6 @@
 // Path: core/widgets/app_error_view.dart
 import "package:flutter/material.dart";
+import "package:infinite_image_gallery_pixabay/core/config/app_dimensions.dart";
 import "package:infinite_image_gallery_pixabay/core/config/app_typography.dart";
 import "package:infinite_image_gallery_pixabay/core/config/space.dart";
 import "package:infinite_image_gallery_pixabay/core/constants/app_strings.dart";
@@ -20,20 +21,23 @@ class AppErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Null-safe before bootstrap (see Tools.showSnackBar).
+    final bool metricsReady = AppDimensions.padding != null;
     return Center(
       child: Padding(
-        padding: Space.all(2),
+        padding:
+            metricsReady ? Space.all(2) : const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             Icon(icon, size: 56),
-            Space.yf(1),
+            metricsReady ? Space.yf(1) : const SizedBox(height: 8),
             Text(
               message,
               style: AppText.b1,
               textAlign: TextAlign.center,
             ),
-            Space.yf(1.5),
+            metricsReady ? Space.yf(1.5) : const SizedBox(height: 12),
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),

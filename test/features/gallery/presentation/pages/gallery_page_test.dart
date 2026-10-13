@@ -1,5 +1,6 @@
 // Path: test/features/gallery/presentation/pages/gallery_page_test.dart
 import "package:custom_masonry_grid/custom_masonry_grid.dart";
+import "package:dartz/dartz.dart";
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
 import "package:flutter_test/flutter_test.dart";
@@ -8,6 +9,9 @@ import "package:infinite_image_gallery_pixabay/core/constants/app_strings.dart";
 import "package:infinite_image_gallery_pixabay/core/error/failures.dart";
 import "package:infinite_image_gallery_pixabay/core/widgets/app_empty_view.dart";
 import "package:infinite_image_gallery_pixabay/core/widgets/app_error_view.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/domain/repositories/favorites_repository.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/presentation/bloc/favorites_bloc.dart";
+import "package:infinite_image_gallery_pixabay/features/gallery/data/models/photo_model.dart";
 import "package:infinite_image_gallery_pixabay/features/detail/data/services/image_download_service.dart";
 import "package:infinite_image_gallery_pixabay/features/detail/presentation/cubit/download_cubit.dart";
 import "package:infinite_image_gallery_pixabay/features/detail/presentation/pages/detail_page.dart";
@@ -21,13 +25,13 @@ import "package:infinite_scroll_pagination/infinite_scroll_pagination.dart";
 import "package:mocktail/mocktail.dart";
 
 import "../../test_doubles.dart";
+import "../../gallery_fixtures.dart";
 
 /// Why fixed pumps instead of pumpAndSettle: tile images load over HTTP and
 /// the sandbox blackholes those connections, so shimmer placeholders spin
 /// forever. All fetches are immediate mocked futures — ten 100 ms pumps are
 /// ample and deterministic.
-Future<void> pumpFrames(
-  WidgetTester tester, {
+Future<void> pumpFrames(  WidgetTester tester, {
   int count = 10,
   Duration step = const Duration(milliseconds: 100),
 }) async {
@@ -36,30 +40,26 @@ Future<void> pumpFrames(
   }
 }
 
-/// Never-called stand-in so DetailPage can resolve its cubit via sl.
-/// Download behavior itself is covered in detail_page_test.dart.
-class _NoopDownloadService implements ImageDownloadService {
-  @override
-  Future<String> downloadToGallery(
-    String imageUrl, {
-    required void Function(double) onProgress,
-    String? fileName,
-  }) async =>
-      "noop.jpg";
-}
-
 void main() {
   late MockGetPhotos mockGetPhotos;
+  late MockFavoritesRepository mockFavRepo;
 
   setUpAll(() {
     registerFallbackValue(const GalleryParams());
+    registerFallbackValue(
+      PhotoModel.fromJson(sampleHitJson()).toEntity(),
+    );
   });
 
   setUp(() {
     mockGetPhotos = MockGetPhotos();
+    mockFavRepo = MockFavoritesRepository();
+    when(() => mockFavRepo.getFavorites()).thenAnswer(
+      (_) async => const Right<Failure, List<Photo>>(<Photo>[]),
+    );
     // DetailPage resolves its DownloadCubit via sl on navigation.
     sl.registerLazySingleton<ImageDownloadService>(
-      () => _NoopDownloadService(),
+      () => NoopImageDownloadService(),
     );
     sl.registerFactory<DownloadCubit>(
       () => DownloadCubit(service: sl<ImageDownloadService>()),
@@ -70,11 +70,15 @@ void main() {
     await sl.reset();
   });
 
-  Future<void> pumpGallery(WidgetTester tester) async {    await tester.pumpWidget(
-      MaterialApp(
-        home: BlocProvider<GalleryBloc>(
-          create: (_) => GalleryBloc(getPhotos: mockGetPhotos, perPage: 20),
-          child: const GalleryPage(),
+  Future<void> pumpGallery(WidgetTester tester) async {
+    await tester.pumpWidget(
+      BlocProvider<FavoritesBloc>(
+        create: (_) => FavoritesBloc(repository: mockFavRepo),
+        child: MaterialApp(
+          home: BlocProvider<GalleryBloc>(
+            create: (_) => GalleryBloc(getPhotos: mockGetPhotos, perPage: 20),
+            child: const GalleryPage(),
+          ),
         ),
       ),
     );
@@ -187,6 +191,30 @@ void main() {
       final calls = galleryCalls(mockGetPhotos);
       expect(calls.last.category, "nature");
       expect(calls.last.page, 1);
+    });
+  });
+
+  group("GalleryPage favorites", () {
+    testWidgets("heart toggles favorite through the bloc",
+        (WidgetTester tester) async {
+      stubGalleryPages(
+        mockGetPhotos,
+        <int, List<Photo>>{1: samplePhotos(6)},
+        totalHits: 6,
+      );
+      when(() => mockFavRepo.toggleFavorite(any())).thenAnswer(
+        (_) async => Right<Failure, ToggleResult>((
+          photos: <Photo>[samplePhotos(1).single],
+          isFavorite: true,
+        )),
+      );
+
+      await pumpGallery(tester);
+      await tester.tap(find.byTooltip("Add to favorites").first);
+      await pumpFrames(tester);
+
+      verify(() => mockFavRepo.toggleFavorite(any())).called(1);
+      expect(find.text(S.favoriteAdded), findsOneWidget);
     });
   });
 

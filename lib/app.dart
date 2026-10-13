@@ -4,14 +4,20 @@ import "package:flutter_bloc/flutter_bloc.dart";
 import "package:infinite_image_gallery_pixabay/core/config/app.dart";
 import "package:infinite_image_gallery_pixabay/core/config/apptheme.dart";
 import "package:infinite_image_gallery_pixabay/core/constants/app_strings.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/presentation/bloc/favorites_bloc.dart";
+import "package:infinite_image_gallery_pixabay/features/favorites/presentation/bloc/favorites_event.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/bloc/gallery_bloc.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/pages/gallery_page.dart";
 import "package:infinite_image_gallery_pixabay/injection_container.dart";
 
 /// Root widget. Owns [MaterialApp] + responsive bootstrap ([App.init]).
-/// Feature Blocs are provided here (DIP: pages read them via context).
-/// Phase 2: [GalleryBloc]. Favorites/Theme/Download providers land in
-/// Phases 3–5 alongside their features.
+///
+/// Provider scope is deliberate:
+/// - [FavoritesBloc] lives ABOVE [MaterialApp] (global singleton): every
+///   route (gallery, detail, favorites) shares one instance. Started once
+///   here, so persisted favorites load at launch.
+/// - [GalleryBloc] is per-page (factory), provided with the home route.
+///   (ThemeCubit joins the global set in Phase 5.)
 class GalleryApp extends StatefulWidget {
   const GalleryApp({super.key});
 
@@ -26,13 +32,17 @@ class _GalleryAppState extends State<GalleryApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: S.appName,
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
-      home: _Bootstrap(onReady: _onCoreReady),
+    return BlocProvider<FavoritesBloc>(
+      create: (_) =>
+          sl<FavoritesBloc>()..add(const FavoritesStarted()),
+      child: MaterialApp(
+        title: S.appName,
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system,
+        home: _Bootstrap(onReady: _onCoreReady),
+      ),
     );
   }
 }

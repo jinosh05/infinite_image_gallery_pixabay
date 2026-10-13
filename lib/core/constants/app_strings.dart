@@ -25,6 +25,7 @@ class S {
   static const String emptyGalleryHint = "Try a different search or pull to refresh.";
   static const String emptyFavorites = "No favorites yet";
   static const String emptyFavoritesHint = "Tap the heart icon on any photo to save it here.";
+  static const String favoritesCleared = "Favorites cleared";
 
   static const String errorGeneric = "Something went wrong. Please try again.";
   static const String errorNoInternet = "No internet connection.";

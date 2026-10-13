@@ -29,6 +29,28 @@ class PhotoModel extends Photo {
   static int _asInt(dynamic value) => (value as num?)?.toInt() ?? 0;
   static String _asString(dynamic value) => value as String? ?? "";
 
+  /// Builds a storable model from a domain entity (favorites persistence).
+  factory PhotoModel.fromEntity(Photo entity) => PhotoModel(
+        id: entity.id,
+        pageURL: entity.pageURL,
+        type: entity.type,
+        tags: entity.tags,
+        previewURL: entity.previewURL,
+        previewWidth: entity.previewWidth,
+        previewHeight: entity.previewHeight,
+        webformatURL: entity.webformatURL,
+        webformatWidth: entity.webformatWidth,
+        webformatHeight: entity.webformatHeight,
+        largeImageURL: entity.largeImageURL,
+        imageWidth: entity.imageWidth,
+        imageHeight: entity.imageHeight,
+        views: entity.views,
+        downloads: entity.downloads,
+        likes: entity.likes,
+        user: entity.user,
+        userImageURL: entity.userImageURL,
+      );
+
   factory PhotoModel.fromJson(Map<String, dynamic> json) => PhotoModel(
         id: _asInt(json["id"]),
         pageURL: _asString(json["pageURL"]),
