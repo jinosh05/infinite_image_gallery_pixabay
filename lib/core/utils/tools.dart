@@ -5,7 +5,6 @@ import "package:infinite_image_gallery_pixabay/core/config/app_typography.dart";
 import "package:infinite_image_gallery_pixabay/core/config/space.dart";
 import "package:infinite_image_gallery_pixabay/core/constants/app_colors.dart";
 import "package:infinite_image_gallery_pixabay/core/error/failures.dart";
-import "package:share_plus/share_plus.dart";
 
 /// App-wide UI helpers: snackbars + share.
 ///
@@ -130,18 +129,5 @@ class Tools {
   /// Shows a [Failure]'s message as an error snackbar.
   static void showFailure(BuildContext context, Failure failure) {
     showError(context, failure.message);
-  }
-
-  /// Shares an image URL as text (+ optional caption).
-  /// Full file-share (bytes via XFile) is handled by the detail feature
-  /// after download; this stays a lightweight text share (DIP: no file I/O).
-  static Future<void> shareImageUrl(
-    String imageUrl, {
-    String? caption,
-  }) async {
-    final ShareParams params = ShareParams(
-      text: caption == null ? imageUrl : "$caption\n$imageUrl",
-    );
-    await SharePlus.instance.share(params);
   }
 }

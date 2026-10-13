@@ -8,13 +8,23 @@ import "package:infinite_image_gallery_pixabay/core/network/dio_client.dart";
 import "package:infinite_image_gallery_pixabay/core/utils/permission_helper.dart";
 import "package:path_provider/path_provider.dart";
 
-/// Device-side download contract (ISP: gallery-saving only — sharing and
-/// favorites have their own paths). Returns the saved file path/name.
+/// Device-side download contract: gallery-saving + temp-file staging for
+/// sharing (ISP: favorites have their own path).
 abstract class ImageDownloadService {
+  /// Saves to the system gallery. Returns the saved file path/name.
   Future<String> downloadToGallery(
     String imageUrl, {
     required void Function(double progress) onProgress,
     String? fileName,
+  });
+
+  /// Downloads [imageUrl] to a temp file and returns its path.
+  /// Unlike [downloadToGallery], needs no storage permission (the file
+  /// stays in the app sandbox and is shared via FileProvider).
+  Future<String> downloadToTempFile(
+    String imageUrl, {
+    String? fileName,
+    void Function(double progress)? onProgress,
   });
 }
 
@@ -40,29 +50,20 @@ class ImageDownloadServiceImpl implements ImageDownloadService {
       throw const PermissionException();
     }
 
-    final Directory tmp = await getTemporaryDirectory();
-    final String safeName =
-        (fileName ?? "pixabay_${DateTime.now().millisecondsSinceEpoch}")
-            .replaceAll(RegExp(r"[^\w\-]+"), "_");
-    final String savePath = "${tmp.path}/$safeName.jpg";
-
-    try {
-      await _dio.download(
-        imageUrl,
-        savePath,
-        onReceiveProgress: (int received, int total) {
-          if (total > 0) onProgress(received / total);
-        },
-      );
-    } on DioException {
-      throw const DownloadException(
-        "Download failed. Check your connection and try again.",
-      );
-    }
+    final String savePath = await downloadToTempFile(
+      imageUrl,
+      fileName: fileName,
+      onProgress: onProgress,
+    );
+    final String safeName = savePath.split(Platform.pathSeparator).last;
+    final String galleryName = safeName.replaceAll(RegExp(r"\.jpg$"), "");
 
     dynamic result;
     try {
-      result = await ImageGallerySaverPlus.saveFile(savePath, name: safeName);
+      result = await ImageGallerySaverPlus.saveFile(
+        savePath,
+        name: galleryName,
+      );
     } catch (_) {
       throw const DownloadException(
         "Could not save to gallery. Please try again.",
@@ -82,5 +83,35 @@ class ImageDownloadServiceImpl implements ImageDownloadService {
       return result["filePath"] as String;
     }
     return safeName;
+  }
+
+  @override
+  Future<String> downloadToTempFile(
+    String imageUrl, {
+    String? fileName,
+    void Function(double progress)? onProgress,
+  }) async {
+    if (imageUrl.isEmpty) {
+      throw const DownloadException("Image URL is missing.");
+    }
+    final Directory tmp = await getTemporaryDirectory();
+    final String safeName =
+        (fileName ?? "pixabay_${DateTime.now().millisecondsSinceEpoch}")
+            .replaceAll(RegExp(r"[^\w\-]+"), "_");
+    final String savePath = "${tmp.path}/$safeName.jpg";
+    try {
+      await _dio.download(
+        imageUrl,
+        savePath,
+        onReceiveProgress: (int received, int total) {
+          if (total > 0) onProgress?.call(received / total);
+        },
+      );
+    } on DioException {
+      throw const DownloadException(
+        "Download failed. Check your connection and try again.",
+      );
+    }
+    return savePath;
   }
 }

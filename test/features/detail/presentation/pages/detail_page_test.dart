@@ -183,6 +183,13 @@ void main() {
     // Failure surfacing (try/catch → snackbar) is verified on-device.
     testWidgets("share tap never crashes",
         (WidgetTester tester) async {
+      when(
+        () => mockService.downloadToTempFile(
+          any(),
+          fileName: any(named: "fileName"),
+        ),
+      ).thenAnswer((_) async => "/tmp/share.jpg");
+
       await pumpDetail(tester, samplePhoto());
       await tester.tap(find.byIcon(Icons.share_outlined));
       await pumpFrames(tester);

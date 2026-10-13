@@ -185,6 +185,9 @@ lib/
    `Tools.showSnackBar` no longer assumes bootstrap ran (fallback metrics);
    plugin calls (share/url) are presence/crash-freedom-tested only —
    untestable without platform plugins.
+- Post-Phase-3 change (user feedback): share sends the WHOLE image file
+  (staged via `downloadToTempFile` + `XFile`, no storage permission needed)
+  instead of a link; share button shows a spinner while staging.
 
 ---
 
@@ -263,6 +266,10 @@ lib/
 - [x] Phase 3: detail + download progress + share (64 tests)
 - [x] Phase 4: favorites persistence + sync (87 tests)
 - [x] Phase 5: shell + theme + global error polish (95 tests)
-- [ ] Phase 6: full tests + README + APK + screenshots
+- [x] Phase 6: release APK (obfuscated, R8) verified on emulator ✅ DONE
+  - `release/gallery-v1.0.0.apk` (debug-signed), symbols uncommitted
+  - Release-only catch fixed: `INTERNET` (+ `ACCESS_NETWORK_STATE`)
+    (debug builds get it implicitly — release showed "No internet" without it)
+  - Verified: masonry default, images, favorites persistence, chip contrast
 
 > Suggested commit per phase (`feat(gallery): …`, `feat(detail): …`, `feat(favorites): …`, `test: …`, `docs: …`).

@@ -7,13 +7,17 @@ favorites with persistence, sharing, and light/dark themes.
 
 ## Screenshots
 
-| Gallery (grid) | Detail | Favorites |
-|---|---|---|
-| ![Gallery grid](screenshots/01_gallery_grid.png) | ![Detail](screenshots/03_detail.png) | ![Favorites](screenshots/04_favorites.png) |
-
-| Masonry | Dark theme |
+| Grid (light) | Masonry (light) |
 |---|---|
-| ![Masonry](screenshots/02_gallery_masonry.png) | ![Dark](screenshots/05_dark_theme.png) |
+| ![Grid gallery](screenshots/grid_gallery.png) | ![Masonry gallery](screenshots/gallery_masonry.png) |
+
+| Grid (dark) | Masonry (dark) |
+|---|---|
+| ![Dark grid](screenshots/dark_grid_gallery.png) | ![Dark masonry](screenshots/dark_gallery_masonry.png) |
+
+| Detail (dark) | Favorites (dark) |
+|---|---|
+| ![Detail](screenshots/dark_details.png) | ![Favorites](screenshots/dark_favourite.png) |
 
 ## Setup
 
@@ -28,9 +32,24 @@ favorites with persistence, sharing, and light/dark themes.
    ```bash
    flutter pub get
    flutter run            # emulator / device
-   flutter build apk --release   # APK at build/app/outputs/flutter-apk/
    ```
 4. **Tests:** `flutter test` (95 tests) · `flutter analyze` (clean).
+
+## Release APK (obfuscated)
+
+```bash
+flutter build apk --release --obfuscate --split-debug-info=build/app/outputs/symbols
+```
+
+- Output: `build/app/outputs/flutter-apk/app-release.apk`, copied to
+  **`release/gallery-v1.0.0.apk`** (install via
+  `adb install -r release/gallery-v1.0.0.apk`).
+- Android hardening: `compileSdk 37` (required by `permission_handler`),
+  R8 `isMinifyEnabled` + `isShrinkResources` with `proguard-rules.pro`
+  (keeps Flutter engine, FileProvider, all plugin channels).
+- Debug symbols for de-obfuscating crash traces: `build/app/outputs/symbols/`
+  (not committed).
+- Signed with debug keys — replace with a real keystore before store upload.
 
 ### Platform notes (already configured)
 
@@ -97,8 +116,3 @@ lib/
   target (both degrade to snackbars when unavailable).
 - Widget tests use fixed pumps (sandbox blackholes image HTTP, so shimmer
   never settles) — documented in the test files.
-
-## Project status
-
-Phases 0–6 per `Plans.md`: foundation → gallery → detail → favorites →
-theme/shell → tests/docs/APK. `flutter test` 95/95 · `flutter analyze` clean.

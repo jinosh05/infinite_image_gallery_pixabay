@@ -5,6 +5,7 @@ import "package:infinite_image_gallery_pixabay/core/constants/app_strings.dart";
 import "package:infinite_image_gallery_pixabay/core/utils/format_utils.dart";
 import "package:infinite_image_gallery_pixabay/core/utils/tools.dart";
 import "package:infinite_image_gallery_pixabay/core/widgets/appimage.dart";
+import "package:infinite_image_gallery_pixabay/features/detail/data/services/image_download_service.dart";
 import "package:infinite_image_gallery_pixabay/features/detail/presentation/cubit/download_cubit.dart";
 import "package:infinite_image_gallery_pixabay/features/detail/presentation/cubit/download_state.dart";
 import "package:infinite_image_gallery_pixabay/features/favorites/presentation/bloc/favorites_bloc.dart";
@@ -13,6 +14,7 @@ import "package:infinite_image_gallery_pixabay/features/favorites/presentation/w
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/entities/photo.dart";
 import "package:infinite_image_gallery_pixabay/features/theme/presentation/widgets/theme_toggle_button.dart";
 import "package:infinite_image_gallery_pixabay/injection_container.dart";
+import "package:share_plus/share_plus.dart";
 import "package:url_launcher/url_launcher.dart";
 
 /// Image detail: Hero image (pinch-zoom) + description block + actions.
@@ -34,21 +36,49 @@ class DetailPage extends StatelessWidget {
   }
 }
 
-class _DetailView extends StatelessWidget {
+class _DetailView extends StatefulWidget {
   const _DetailView({required this.photo});
 
   final Photo photo;
 
+  @override
+  State<_DetailView> createState() => _DetailViewState();
+}
+
+class _DetailViewState extends State<_DetailView> {
+  Photo get photo => widget.photo;
+
   String get _heroTag => "photo-${photo.id}";
 
+  bool _sharing = false;
+
+  /// Shares the whole image file (not a link): staged to the app sandbox,
+  /// then handed to the system sheet with a caption.
   Future<void> _onShare(BuildContext context) async {
+    if (_sharing) return;
+    setState(() => _sharing = true);
     try {
+      final String path =
+          await sl<ImageDownloadService>().downloadToTempFile(
+        photo.detailImageUrl,
+        fileName: "pixabay_${photo.id}_share",
+      );
       final String caption = photo.tagList.isEmpty
           ? "Photo by ${photo.user} via ${S.appName}"
           : "${photo.tagList.take(5).join(', ')} — by ${photo.user}";
-      await Tools.shareImageUrl(photo.detailImageUrl, caption: caption);
+      await SharePlus.instance.share(
+        ShareParams(
+          files: <XFile>[
+            XFile(path,
+                mimeType: "image/jpeg", name: "pixabay_${photo.id}.jpg"),
+          ],
+          text: caption,
+        ),
+      );
     } catch (_) {
       if (context.mounted) Tools.showError(context, S.errorGeneric);
+    } finally {
+      if (mounted) setState(() => _sharing = false);
     }
   }
 
@@ -82,8 +112,14 @@ class _DetailView extends StatelessWidget {
             const ThemeToggleButton(),
             IconButton(
               tooltip: S.share,
-              icon: const Icon(Icons.share_outlined),
-              onPressed: () => _onShare(context),
+              icon: _sharing
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.share_outlined),
+              onPressed: _sharing ? null : () => _onShare(context),
             ),
             IconButton(
               tooltip: isFavorite

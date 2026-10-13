@@ -33,6 +33,14 @@ class NoopImageDownloadService implements ImageDownloadService {
     String? fileName,
   }) async =>
       "noop.jpg";
+
+  @override
+  Future<String> downloadToTempFile(
+    String imageUrl, {
+    String? fileName,
+    void Function(double)? onProgress,
+  }) async =>
+      "noop_tmp.jpg";
 }
 
 /// Fresh [ThemeCubit] backed by mock prefs (each call resets the store).
