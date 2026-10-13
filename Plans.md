@@ -125,15 +125,36 @@ lib/
 
 ---
 
-## 5. Phase 2 — Gallery PRESENTATION: grid + infinite scroll (~3–4 h)
+## 5. Phase 2 — Gallery PRESENTATION: grid + infinite scroll ✅ DONE
 
-1. `GalleryBloc` (events: `Requested(pageKey)`, `QueryChanged(q)` debounced 400 ms, `CategoryChanged(c)`, `Refreshed`; state: `status {initial,loading,success,failure}`, `photos`, `totalHits`, `hasReachedMax`, `query`, `category`, `errorMessage`). Bloc fetches page, emits appended list; **paging math**: `isLastPage = hits.isEmpty || accumulated.length >= totalHits`.
-2. Page wiring: `PagingController<int, Photo>` (firstPageKey = 1) in `GalleryPage` (`features/gallery/presentation/pages/gallery_page.dart`); bloc listener → `appendPage(nextKey, items)` / `appendLastPage(items)` / `error = msg`. `PagedChildBuilderDelegate` with `firstPageProgressIndicatorBuilder → AppLoadingGrid`, `newPageProgressIndicatorBuilder → footer spinner`, `firstPageErrorIndicatorBuilder → AppErrorView(retry: controller.refresh)`, `noItemsFoundIndicatorBuilder → AppEmptyView`, `noMoreItemsIndicatorBuilder → "You've reached the end"`.
-3. Grid UI: `RefreshIndicator(onRefresh: () => Future.sync(controller.refresh))` → responsive `GridView` (crossAxisCount from `UI.width`: <360→2, <720→3, else 4) OR `CustomMasonryGrid` masonry toggle (bonus, keep both behind AppBar switch). Tile widget (`photo_tile.dart`): `AppImage(webformatURL)`, bottom gradient + likes/views chips, heart button (reads `FavoritesBloc`), `Hero(tag: "photo-{id}")` wrapping image.
-4. AppBar: title + `SearchBar` (bonus search, debounced) + masonry toggle + theme toggle + favorites navigation icon.
-5. Category filter row (bonus): horizontal `ChoiceChip`s from `ApiConstants.categories`; selecting resets paging (`controller.refresh()` with new category).
-6. Detail navigation: `AppRoutes.push(context, DetailPage(photo))` — pass entity, no refetch ( heroes animate because tags match).
-7. Widget test: grid renders tiles from stubbed bloc; error view retry calls refresh. Gate: scroll loads page 2+; empty query + search + category all page correctly; rotation/tablet columns adapt.
+> v5 API note: `infinite_scroll_pagination@5` is controller-driven
+> (`PagingController(getNextPageKey:, fetchPage:)` + `PagingListener` +
+> `PagedGridView`), not the v4 `appendPage` style. Empty page ⇒
+> `lastPageIsEmpty` ⇒ key `null` ⇒ stop — exactly the Pixabay contract.
+
+1. `GalleryBloc` (+ event/state) — owns filters + fetching via `GetPhotos`;
+   paging mechanics stay in the controller. States tag results with
+   `resolvedPageKey` so the `fetchPage` bridge (subscribe-first, then
+   dispatch `GalleryPageRequested`) never cross-talks retries/pages.
+2. `getNextPageKey`: exact stop at `loaded >= totalHits`, empty-page safety
+   net for the deep-paging cap. Failures cross the bridge as
+   `PageFetchError` (v5 rethrows non-Exceptions).
+3. `GalleryPage`: `PagingListener` → `PagedGridView` (responsive columns via
+   pure `galleryCrossAxisCount`) OR `CustomMasonryGrid` (manual proximity
+   fetch + footer) behind the AppBar toggle; `RefreshIndicator`
+   (skipped while loading — v5 fetch is non-atomic); `firstPage → AppLoadingGrid`
+   (flex boxes, NOT a GridView — v5 slots indicators into SliverFillRemaining);
+   error → `AppErrorView` + retry; empty → `AppEmptyView`.
+4. `PhotoTile` (Hero `photo-{id}`, stats overlay, favorite button only when
+   Phase 4 passes a handler), `GallerySearchField` (400 ms debounce),
+   `CategoryFilterRow`, interim `PhotoPreviewDialog` (Phase 3 replaces the
+   call site with DetailPage; `onTap` seam unchanged).
+5. Tests: `bloc_test` (paging/filter/reset/dedupe) + 10 widget tests
+   (render, scroll-pagination, error+retry, empty, search, category,
+   masonry, preview, favorite seam) + app composition test. Widget tests use
+   fixed pumps (sandbox blackholes image HTTP ⇒ shimmer never settles) and
+   call `App.init` (mirrors the bootstrap contract).
+   Gate: `flutter test` green (51 tests), `flutter analyze` clean. ✅ DONE
 
 ---
 
@@ -173,7 +194,7 @@ lib/
 
 - [ ] Phase 0 verify: `pub get` + `analyze` clean (foundation already written)
 - [x] Phase 1: data+domain + get_it DI + unit tests green (32 tests)
-- [ ] Phase 2: gallery paging/search/filter/masonry/hero + widget tests
+- [x] Phase 2: gallery paging/search/filter/masonry/hero + widget tests (51 tests)
 - [ ] Phase 3: detail + download progress + share
 - [ ] Phase 4: favorites persistence + sync
 - [ ] Phase 5: shell + theme + global error polish

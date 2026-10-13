@@ -1,15 +1,17 @@
 // Path: lib/app.dart
 import "package:flutter/material.dart";
+import "package:flutter_bloc/flutter_bloc.dart";
 import "package:infinite_image_gallery_pixabay/core/config/app.dart";
 import "package:infinite_image_gallery_pixabay/core/config/apptheme.dart";
-import "package:infinite_image_gallery_pixabay/core/config/env_config.dart";
-import "package:infinite_image_gallery_pixabay/core/config/space.dart";
 import "package:infinite_image_gallery_pixabay/core/constants/app_strings.dart";
+import "package:infinite_image_gallery_pixabay/features/gallery/presentation/bloc/gallery_bloc.dart";
+import "package:infinite_image_gallery_pixabay/features/gallery/presentation/pages/gallery_page.dart";
+import "package:infinite_image_gallery_pixabay/injection_container.dart";
 
 /// Root widget. Owns [MaterialApp] + responsive bootstrap ([App.init]).
-/// Feature Blocs (Gallery/Favorites/Theme/Download) are added to the
-/// [MultiBlocProvider] here in their respective phases — Phase 2 replaces
-/// [_PlaceholderHome] with the real gallery page.
+/// Feature Blocs are provided here (DIP: pages read them via context).
+/// Phase 2: [GalleryBloc]. Favorites/Theme/Download providers land in
+/// Phases 3–5 alongside their features.
 class GalleryApp extends StatefulWidget {
   const GalleryApp({super.key});
 
@@ -70,51 +72,9 @@ class _BootstrapState extends State<_Bootstrap> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    return const _PlaceholderHome();
-  }
-}
-
-/// Temporary home until Phase 2 lands the gallery page.
-/// Shows env/key status so setup problems are visible immediately.
-class _PlaceholderHome extends StatelessWidget {
-  const _PlaceholderHome();
-
-  @override
-  Widget build(BuildContext context) {
-    final TextTheme text = Theme.of(context).textTheme;
-    final bool hasKey = EnvConfig.hasApiKey;
-
-    return Scaffold(
-      appBar: AppBar(title: const Text(S.appName)),
-      body: Center(
-        child: Padding(
-          padding: Space.all(2),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(
-                hasKey ? Icons.photo_library_outlined : Icons.key_off_outlined,
-                size: 56,
-              ),
-              Space.yf(1),
-              Text(
-                hasKey ? S.galleryTitle : "API key missing",
-                style: text.headlineSmall,
-                textAlign: TextAlign.center,
-              ),
-              Space.yf(0.5),
-              Text(
-                hasKey
-                    ? "Gallery UI lands in Phase 2."
-                    : "Add PIXABAY_API_KEY to your .env file, then restart. "
-                        "Get a free key at pixabay.com/api/docs/",
-                style: text.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
+    return BlocProvider<GalleryBloc>(
+      create: (_) => sl<GalleryBloc>(),
+      child: const GalleryPage(),
     );
   }
 }

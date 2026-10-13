@@ -1,28 +1,56 @@
-// Bootstrap smoke test: app boots with/without an API key.
-import "package:flutter/material.dart";
+// App composition test: GalleryApp boots through sl + shows the gallery.
+//
+// Fixed pumps (see gallery_page_test.dart): tile image loads hang in the
+// sandbox, so pumpAndSettle can never settle. GalleryApp's own _Bootstrap
+// runs App.init, so no manual core init is needed here.
 import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:infinite_image_gallery_pixabay/app.dart";
 import "package:infinite_image_gallery_pixabay/core/constants/app_strings.dart";
+import "package:infinite_image_gallery_pixabay/features/gallery/domain/entities/photo.dart";
+import "package:infinite_image_gallery_pixabay/features/gallery/domain/repositories/gallery_repository.dart";
+import "package:infinite_image_gallery_pixabay/features/gallery/presentation/bloc/gallery_bloc.dart";
+import "package:infinite_image_gallery_pixabay/features/gallery/presentation/widgets/photo_tile.dart";
+import "package:infinite_image_gallery_pixabay/injection_container.dart";
+import "package:mocktail/mocktail.dart";
+import "package:shared_preferences/shared_preferences.dart";
+
+import "features/gallery/test_doubles.dart";
 
 void main() {
-  testWidgets("shows key-missing guidance when .env has no key",
-      (WidgetTester tester) async {
-    dotenv.loadFromString(envString: "SOME_OTHER_VAR=1");
-    await tester.pumpWidget(const GalleryApp());
-    await tester.pumpAndSettle();
+  late MockGetPhotos mockGetPhotos;
 
-    expect(find.text(S.appName), findsWidgets);
-    expect(find.text("API key missing"), findsOneWidget);
+  setUpAll(() {
+    registerFallbackValue(const GalleryParams());
   });
 
-  testWidgets("shows gallery placeholder when a key exists",
-      (WidgetTester tester) async {
+  setUp(() {
     dotenv.loadFromString(envString: "PIXABAY_API_KEY=TEST_KEY");
-    await tester.pumpWidget(const GalleryApp());
-    await tester.pumpAndSettle();
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    mockGetPhotos = MockGetPhotos();
+    stubGalleryPages(
+      mockGetPhotos,
+      <int, List<Photo>>{1: samplePhotos(4)},
+      totalHits: 4,
+    );
+    // Composition under test: real sl graph, only the use case mocked.
+    sl.registerLazySingleton<MockGetPhotos>(() => mockGetPhotos);
+    sl.registerFactory<GalleryBloc>(
+      () => GalleryBloc(getPhotos: sl<MockGetPhotos>()),
+    );
+  });
 
-    expect(find.byIcon(Icons.photo_library_outlined), findsOneWidget);
+  tearDown(() async {
+    await sl.reset();
+  });
+
+  testWidgets("boots to the gallery with tiles", (WidgetTester tester) async {
+    await tester.pumpWidget(const GalleryApp());
+    for (int i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
     expect(find.text(S.galleryTitle), findsOneWidget);
+    expect(find.byType(PhotoTile), findsWidgets);
   });
 }

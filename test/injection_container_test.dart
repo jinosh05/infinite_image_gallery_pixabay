@@ -1,15 +1,18 @@
 // Path: test/injection_container_test.dart
 import "package:dio/dio.dart";
+import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:infinite_image_gallery_pixabay/core/utils/network_check.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/data/datasources/gallery_remote_data_source.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/repositories/gallery_repository.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/use_cases/get_photos.dart";
+import "package:infinite_image_gallery_pixabay/features/gallery/presentation/bloc/gallery_bloc.dart";
 import "package:infinite_image_gallery_pixabay/injection_container.dart";
 import "package:shared_preferences/shared_preferences.dart";
 
 void main() {
   setUp(() {
+    dotenv.loadFromString(envString: "PIXABAY_API_KEY=TEST_KEY");
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
@@ -39,5 +42,12 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  test("gallery bloc is a factory (fresh instance per page)", () async {
+    await initDependencies();
+
+    expect(sl<GalleryBloc>(), isNotNull);
+    expect(identical(sl<GalleryBloc>(), sl<GalleryBloc>()), isFalse);
   });
 }

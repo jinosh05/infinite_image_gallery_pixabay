@@ -1,12 +1,14 @@
 // Path: lib/injection_container.dart
 import "package:dio/dio.dart";
 import "package:get_it/get_it.dart";
+import "package:infinite_image_gallery_pixabay/core/config/env_config.dart";
 import "package:infinite_image_gallery_pixabay/core/network/dio_client.dart";
 import "package:infinite_image_gallery_pixabay/core/utils/network_check.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/data/datasources/gallery_remote_data_source.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/data/repositories/gallery_repository_impl.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/repositories/gallery_repository.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/use_cases/get_photos.dart";
+import "package:infinite_image_gallery_pixabay/features/gallery/presentation/bloc/gallery_bloc.dart";
 import "package:shared_preferences/shared_preferences.dart";
 
 /// Global service locator. Call [initDependencies] once in `main()` before
@@ -35,4 +37,12 @@ Future<void> initDependencies() async {
     ),
   );
   sl.registerLazySingleton<GetPhotos>(() => GetPhotos(sl<GalleryRepository>()));
+
+  // Factory: GalleryPage owns its Bloc instance (disposed with the page).
+  sl.registerFactory<GalleryBloc>(
+    () => GalleryBloc(
+      getPhotos: sl<GetPhotos>(),
+      perPage: EnvConfig.defaultPerPage,
+    ),
+  );
 }

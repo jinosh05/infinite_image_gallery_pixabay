@@ -1,0 +1,63 @@
+// Shared doubles + stub helpers for gallery presentation tests.
+import "package:dartz/dartz.dart";
+import "package:infinite_image_gallery_pixabay/core/error/failures.dart";
+import "package:infinite_image_gallery_pixabay/features/gallery/data/models/photo_model.dart";
+import "package:infinite_image_gallery_pixabay/features/gallery/domain/entities/photo.dart";
+import "package:infinite_image_gallery_pixabay/features/gallery/domain/entities/photo_page.dart";
+import "package:infinite_image_gallery_pixabay/features/gallery/domain/repositories/gallery_repository.dart";
+import "package:infinite_image_gallery_pixabay/features/gallery/domain/use_cases/get_photos.dart";
+import "package:mocktail/mocktail.dart";
+
+import "gallery_fixtures.dart";
+
+class MockGetPhotos extends Mock implements GetPhotos {}
+
+List<Photo> samplePhotos(int count, {int startId = 1}) =>
+    List<Photo>.generate(
+      count,
+      (int i) =>
+          PhotoModel.fromJson(sampleHitJson(id: startId + i)).toEntity(),
+    );
+
+/// Stubs [mock] to serve [pages] by 1-based page key; unknown pages return
+/// an empty page (signals end-of-list). [totalHits] is echoed on every page.
+void stubGalleryPages(
+  MockGetPhotos mock,
+  Map<int, List<Photo>> pages, {
+  required int totalHits,
+}) {
+  when(() => mock(any())).thenAnswer((Invocation inv) async {
+    final GalleryParams params =
+        inv.positionalArguments.single as GalleryParams;
+    final List<Photo>? photos = pages[params.page];
+    if (photos == null) {
+      return Right<Failure, PhotoPage>(
+        PhotoPage(
+          photos: const <Photo>[],
+          totalHits: totalHits,
+          page: params.page,
+          perPage: params.perPage,
+        ),
+      );
+    }
+    return Right<Failure, PhotoPage>(
+      PhotoPage(
+        photos: photos,
+        totalHits: totalHits,
+        page: params.page,
+        perPage: params.perPage,
+      ),
+    );
+  });
+}
+
+void stubGalleryFailure(MockGetPhotos mock, Failure failure) {
+  when(() => mock(any()))
+      .thenAnswer((_) async => Left<Failure, PhotoPage>(failure));
+}
+
+List<GalleryParams> galleryCalls(MockGetPhotos mock) =>
+    verify(() => mock(captureAny()))
+        .captured
+        .map((dynamic c) => c as GalleryParams)
+        .toList();
