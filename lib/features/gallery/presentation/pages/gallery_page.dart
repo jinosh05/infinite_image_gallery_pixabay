@@ -45,8 +45,15 @@ class GalleryPage extends StatefulWidget {
 class _GalleryPageState extends State<GalleryPage> {
   late final GalleryBloc _bloc;
   late final PagingController<int, Photo> _controller;
+
+  /// Own scroll controller for masonry mode: CustomMasonryGrid renders
+  /// non-scrollable content inside it, so short result sets can auto-fetch
+  /// the next page instead of stranding the user with no way to scroll.
+  late final ScrollController _masonryController;
   bool _ready = false;
-  bool _masonry = false;
+
+  /// Masonry is the default gallery view (user preference).
+  bool _masonry = true;
 
   @override
   void didChangeDependencies() {
@@ -54,6 +61,7 @@ class _GalleryPageState extends State<GalleryPage> {
     if (_ready) return;
     _ready = true;
     _bloc = context.read<GalleryBloc>();
+    _masonryController = ScrollController();
     _controller = PagingController<int, Photo>(
       getNextPageKey: (PagingState<int, Photo> state) {
         final int loaded = state.items?.length ?? 0;
@@ -87,6 +95,7 @@ class _GalleryPageState extends State<GalleryPage> {
 
   @override
   void dispose() {
+    _masonryController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -232,6 +241,12 @@ class _GalleryPageState extends State<GalleryPage> {
   ) {
     final PagingStatus status = state.status;
     if (status == PagingStatus.loadingFirstPage) {
+      // Unlike PagedGridView, CustomMasonryGrid never fetches by itself —
+      // kick the controller here (post-frame). Covers initial mount AND
+      // filter refreshes. The controller mutex dedupes overlapping calls.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) fetchNextPage();
+      });
       return const AppLoadingGrid();
     }
     final List<Photo> items = state.items ?? <Photo>[];
@@ -247,6 +262,18 @@ class _GalleryPageState extends State<GalleryPage> {
         hint: S.emptyGalleryHint,
       );
     }
+    // Short result sets may not fill the viewport (nothing to scroll) —
+    // keep paging until content overflows or the list ends. The controller
+    // mutex makes the repeated post-frame calls safe.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_masonryController.hasClients) return;
+      final ScrollMetrics m = _masonryController.position;
+      if (state.hasNextPage &&
+          !state.isLoading &&
+          m.maxScrollExtent <= m.viewportDimension) {
+        fetchNextPage();
+      }
+    });
     return NotificationListener<ScrollNotification>(
       onNotification: (ScrollNotification n) {
         if (n.depth == 0) {
@@ -259,19 +286,23 @@ class _GalleryPageState extends State<GalleryPage> {
         }
         return false;
       },
-      child: CustomMasonryGrid(
-        padding: const EdgeInsets.all(12),
-        crossAxisCount:
-            galleryCrossAxisCount(MediaQuery.sizeOf(context).width),
-        items: <Widget>[
-          for (final Photo item in items)
-            _GalleryTile(
-              photo: item,
-              aspectRatio: _masonryAspect(item),
-              onTap: () => _openDetail(context, item),
-            ),
-        ],
-        footer: _masonryFooter(state, fetchNextPage),
+      child: SingleChildScrollView(
+        controller: _masonryController,
+        child: CustomMasonryGrid(
+          isScrollable: false,
+          padding: const EdgeInsets.all(12),
+          crossAxisCount:
+              galleryCrossAxisCount(MediaQuery.sizeOf(context).width),
+          items: <Widget>[
+            for (final Photo item in items)
+              _GalleryTile(
+                photo: item,
+                aspectRatio: _masonryAspect(item),
+                onTap: () => _openDetail(context, item),
+              ),
+          ],
+          footer: _masonryFooter(state, fetchNextPage),
+        ),
       ),
     );
   }

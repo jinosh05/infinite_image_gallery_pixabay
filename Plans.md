@@ -213,6 +213,11 @@ lib/
    Test-forced fixes: `context.select` extracted out of sliver builders
    (`_GalleryTile`); providers moved above `MaterialApp` in tests too;
    `AppEmptyView`/`AppErrorView` bootstrap-null-safe.
+- Post-Phase-2 fixes (user feedback on-device): masonry is now the DEFAULT
+  view; category chips use explicit per-state scheme colors (inherited M3
+  label style was near-invisible on light fills); masonry owns its scroll
+  controller + auto-fetches short result sets (CustomMasonryGrid never
+  self-fetches, which previously stranded non-overflowing lists).
 
 ---
 

@@ -107,7 +107,8 @@ void main() {
 
       expect(find.text(S.galleryTitle), findsOneWidget);
       expect(find.byType(PhotoTile), findsWidgets);
-      expect(find.byType(PagedGridView<int, Photo>), findsOneWidget);
+      // Masonry is the default view.
+      expect(find.byType(CustomMasonryGrid), findsOneWidget);
     });
 
     testWidgets("loads the next page on scroll", (WidgetTester tester) async {
@@ -122,7 +123,7 @@ void main() {
 
       await pumpGallery(tester);
       await tester.drag(
-        find.byType(PagedGridView<int, Photo>),
+        find.byType(CustomMasonryGrid),
         const Offset(0, -3000),
       );
       await pumpFrames(tester);
@@ -247,7 +248,7 @@ void main() {
   });
 
   group("GalleryPage masonry + preview", () {
-    testWidgets("toggles to masonry layout", (WidgetTester tester) async {
+    testWidgets("toggles to grid layout", (WidgetTester tester) async {
       stubGalleryPages(
         mockGetPhotos,
         <int, List<Photo>>{1: samplePhotos(6)},
@@ -255,10 +256,12 @@ void main() {
       );
 
       await pumpGallery(tester);
-      await tester.tap(find.byIcon(Icons.dashboard_outlined));
+      expect(find.byType(CustomMasonryGrid), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.grid_view));
       await pumpFrames(tester);
 
-      expect(find.byType(CustomMasonryGrid), findsOneWidget);
+      expect(find.byType(PagedGridView<int, Photo>), findsOneWidget);
     });
 
     testWidgets("tile tap opens the detail page", (WidgetTester tester) async {

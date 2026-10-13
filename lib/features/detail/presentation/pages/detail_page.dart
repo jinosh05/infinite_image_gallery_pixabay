@@ -122,13 +122,29 @@ class _DetailView extends StatelessWidget {
                   children: <Widget>[
                     // Description block (assignment requirement): tags +
                     // attribution + stats + resolution + source link.
+                    // Tag chips use explicit scheme colors (same lesson as the
+                    // gallery filter chips: inherited M3 label styles proved
+                    // unreliable across themes).
                     if (photo.tagList.isNotEmpty)
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
                         children: <Widget>[
                           for (final String tag in photo.tagList)
-                            Chip(label: Text(tag)),
+                            Chip(
+                              label: Text(
+                                tag,
+                                style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSecondaryContainer,
+                                ),
+                              ),
+                              backgroundColor: Theme.of(context)
+                                  .colorScheme
+                                  .secondaryContainer,
+                              side: BorderSide.none,
+                            ),
                         ],
                       ),
                     const SizedBox(height: 12),

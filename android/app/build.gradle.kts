@@ -6,7 +6,8 @@ plugins {
 
 android {
     namespace = "com.example.infinite_image_gallery_pixabay"
-    compileSdk = flutter.compileSdkVersion
+    // permission_handler_android requires compiling against API 37+.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
