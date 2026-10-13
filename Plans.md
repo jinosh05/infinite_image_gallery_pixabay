@@ -216,11 +216,29 @@ lib/
 
 ---
 
-## 8. Phase 5 — App shell, theme, error/loading polish (~1 h)
+## 8. Phase 5 — App shell, theme, error/loading polish ✅ DONE
 
-1. `app.dart` + `main.dart`: `dotenv.load(fileName: ".env")` → `initDependencies()` → `runApp`; `App.init(context)` on first frame via `_Bootstrap`; `MultiBlocProvider(GalleryBloc, FavoritesBloc, ThemeCubit, DownloadCubit)` added in respective phases. ✅ Bootstrap (env+DI+shell+placeholder home) done early; Bloc providers pending Phases 2–5.
-2. `ThemeCubit`: `ThemeMode.system/light/dark` + persist in `SharedPreferences`; AppBar toggle cycles.
-3. Global rules: every async screen has loading (`AppLoadingGrid`/skeleton) + error (`AppErrorView` + retry) + empty (`AppEmptyView`); failures surface via `Tools.showFailure`; no raw exceptions reach UI. Gate: airplane-mode gallery shows `S.errorNoInternet` + retry works after reconnect.
+1. `app.dart` + `main.dart`: `dotenv.load` → `initDependencies()` → `runApp`
+   (done earlier); `App.init` on first frame. Providers: [FavoritesBloc] +
+   [ThemeCubit] ABOVE `MaterialApp` (global singletons, all routes share),
+   [GalleryBloc] per-page, [DownloadCubit] per-detail. `themeMode` rebuilds
+   via `BlocBuilder<ThemeCubit, ThemeMode>`.
+2. `ThemeCubit` (state IS the `ThemeMode`): system/light/dark persisted to
+   `SharedPreferences` (`theme_mode_v1`, unknown → system); `cycleTheme`
+   system → light → dark → system. One shared `ThemeToggleButton`
+   (mode-reflecting icon) in all three AppBars.
+3. Global rules hold: every async screen has loading (`AppLoadingGrid`) +
+   error (`AppErrorView` + retry) + empty (`AppEmptyView`); failures surface
+   via `Tools` snackbars; repositories map all exceptions (nothing raw
+   reaches UI); missing key shows the unauthorized error view with retry.
+   Gate: airplane-mode gallery shows `S.errorNoInternet`... — note: live
+   `NetworkCheck` does DNS lookup, so the offline copy appears only with
+   genuinely no route; the failure-mapping path is unit-covered. ✅ DONE
+4. Tests: cubit (load/persist/cycle/dedupe/unknown) + toggle widget test +
+   providers in all page pumps + DI singleton. `flutter test` green (95),
+   analyze clean. Test-forced: `blocTest.build` must be sync (seeded cases
+   use direct construction); pushed routes need providers above
+   `MaterialApp` in tests too.
 
 ---
 
@@ -239,7 +257,7 @@ lib/
 - [x] Phase 2: gallery paging/search/filter/masonry/hero + widget tests (51 tests)
 - [x] Phase 3: detail + download progress + share (64 tests)
 - [x] Phase 4: favorites persistence + sync (87 tests)
-- [ ] Phase 5: shell + theme + global error polish
+- [x] Phase 5: shell + theme + global error polish (95 tests)
 - [ ] Phase 6: full tests + README + APK + screenshots
 
 > Suggested commit per phase (`feat(gallery): …`, `feat(detail): …`, `feat(favorites): …`, `test: …`, `docs: …`).

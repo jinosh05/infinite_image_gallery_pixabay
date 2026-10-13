@@ -15,6 +15,7 @@ import "package:infinite_image_gallery_pixabay/features/favorites/presentation/w
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/entities/photo.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/gallery_columns.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/widgets/photo_tile.dart";
+import "package:infinite_image_gallery_pixabay/features/theme/presentation/widgets/theme_toggle_button.dart";
 
 /// Saved-photos screen. Reads the global [FavoritesBloc] (provided above
 /// `MaterialApp`) — no local state, no refetch. Tiles reuse [PhotoTile];
@@ -44,6 +45,7 @@ class FavoritesPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text(S.favoritesTitle),
         actions: <Widget>[
+          const ThemeToggleButton(),
           if (hasItems)
             IconButton(
               tooltip: "Clear all",

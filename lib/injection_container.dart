@@ -13,6 +13,7 @@ import "package:infinite_image_gallery_pixabay/features/favorites/data/datasourc
 import "package:infinite_image_gallery_pixabay/features/favorites/data/repositories/favorites_repository_impl.dart";
 import "package:infinite_image_gallery_pixabay/features/favorites/domain/repositories/favorites_repository.dart";
 import "package:infinite_image_gallery_pixabay/features/favorites/presentation/bloc/favorites_bloc.dart";
+import "package:infinite_image_gallery_pixabay/features/theme/presentation/bloc/theme_cubit.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/use_cases/get_photos.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/bloc/gallery_bloc.dart";
 import "package:shared_preferences/shared_preferences.dart";
@@ -70,5 +71,10 @@ Future<void> initDependencies() async {
   );
   sl.registerLazySingleton<FavoritesBloc>(
     () => FavoritesBloc(repository: sl<FavoritesRepository>()),
+  );
+
+  // ---- Theme (Phase 5; global singleton above MaterialApp) ----
+  sl.registerLazySingleton<ThemeCubit>(
+    () => ThemeCubit(prefs: sl<SharedPreferences>()),
   );
 }

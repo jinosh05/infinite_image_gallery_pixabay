@@ -15,6 +15,7 @@ import "package:infinite_image_gallery_pixabay/features/gallery/domain/entities/
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/repositories/gallery_repository.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/bloc/gallery_bloc.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/widgets/photo_tile.dart";
+import "package:infinite_image_gallery_pixabay/features/theme/presentation/bloc/theme_cubit.dart";
 import "package:infinite_image_gallery_pixabay/injection_container.dart";
 import "package:mocktail/mocktail.dart";
 import "package:shared_preferences/shared_preferences.dart";
@@ -29,7 +30,7 @@ void main() {
     registerFallbackValue(const GalleryParams());
   });
 
-  setUp(() {
+  setUp(() async {
     dotenv.loadFromString(envString: "PIXABAY_API_KEY=TEST_KEY");
     SharedPreferences.setMockInitialValues(<String, Object>{});
     mockGetPhotos = MockGetPhotos();
@@ -50,6 +51,12 @@ void main() {
     sl.registerLazySingleton<FavoritesRepository>(() => mockFavRepo);
     sl.registerLazySingleton<FavoritesBloc>(
       () => FavoritesBloc(repository: sl<FavoritesRepository>()),
+    );
+    sl.registerSingleton<SharedPreferences>(
+      await SharedPreferences.getInstance(),
+    );
+    sl.registerLazySingleton<ThemeCubit>(
+      () => ThemeCubit(prefs: sl<SharedPreferences>()),
     );
   });
 

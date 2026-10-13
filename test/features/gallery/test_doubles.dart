@@ -9,7 +9,9 @@ import "package:infinite_image_gallery_pixabay/features/gallery/domain/entities/
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/entities/photo_page.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/repositories/gallery_repository.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/use_cases/get_photos.dart";
+import "package:infinite_image_gallery_pixabay/features/theme/presentation/bloc/theme_cubit.dart";
 import "package:mocktail/mocktail.dart";
+import "package:shared_preferences/shared_preferences.dart";
 
 import "gallery_fixtures.dart";
 
@@ -31,6 +33,16 @@ class NoopImageDownloadService implements ImageDownloadService {
     String? fileName,
   }) async =>
       "noop.jpg";
+}
+
+/// Fresh [ThemeCubit] backed by mock prefs (each call resets the store).
+Future<ThemeCubit> createTestThemeCubit({String? seedMode}) async {
+  SharedPreferences.setMockInitialValues(
+    seedMode == null
+        ? <String, Object>{}
+        : <String, Object>{ThemeCubit.storageKey: seedMode},
+  );
+  return ThemeCubit(prefs: await SharedPreferences.getInstance());
 }
 
 List<Photo> samplePhotos(int count, {int startId = 1}) =>

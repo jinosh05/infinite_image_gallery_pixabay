@@ -15,6 +15,7 @@ import "package:infinite_image_gallery_pixabay/features/favorites/domain/reposit
 import "package:infinite_image_gallery_pixabay/features/favorites/presentation/bloc/favorites_bloc.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/data/models/photo_model.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/entities/photo.dart";
+import "package:infinite_image_gallery_pixabay/features/theme/presentation/bloc/theme_cubit.dart";
 import "package:infinite_image_gallery_pixabay/injection_container.dart";
 import "package:mocktail/mocktail.dart";
 
@@ -68,10 +69,14 @@ void main() {
       PhotoModel.fromJson(sampleHitJson()).toEntity();
 
   Future<void> pumpDetail(WidgetTester tester, Photo photo) async {
+    final ThemeCubit themeCubit = await createTestThemeCubit();
     await tester.pumpWidget(
       BlocProvider<FavoritesBloc>(
         create: (_) => FavoritesBloc(repository: mockFavRepo),
-        child: MaterialApp(home: DetailPage(photo: photo)),
+        child: BlocProvider<ThemeCubit>.value(
+          value: themeCubit,
+          child: MaterialApp(home: DetailPage(photo: photo)),
+        ),
       ),
     );
     await pumpFrames(tester);

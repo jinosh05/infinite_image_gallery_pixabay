@@ -17,9 +17,9 @@ import "package:infinite_image_gallery_pixabay/features/favorites/presentation/b
 import "package:infinite_image_gallery_pixabay/features/favorites/presentation/pages/favorites_page.dart";
 import "package:infinite_image_gallery_pixabay/features/favorites/presentation/widgets/favorites_listener.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/gallery_columns.dart";
-import "package:infinite_image_gallery_pixabay/features/gallery/presentation/widgets/category_filter_row.dart";
-import "package:infinite_image_gallery_pixabay/features/gallery/presentation/widgets/gallery_search_field.dart";
+import "package:infinite_image_gallery_pixabay/features/gallery/presentation/widgets/category_filter_row.dart";import "package:infinite_image_gallery_pixabay/features/gallery/presentation/widgets/gallery_search_field.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/widgets/photo_tile.dart";
+import "package:infinite_image_gallery_pixabay/features/theme/presentation/widgets/theme_toggle_button.dart";
 import "package:infinite_scroll_pagination/infinite_scroll_pagination.dart";
 
 /// Error carrier from the Bloc bridge into the paging controller.
@@ -108,7 +108,7 @@ class _GalleryPageState extends State<GalleryPage> {
             onPressed: () =>
                 AppRoutes.push(context, const FavoritesPage()),
           ),
-          // TODO(phase5): theme toggle (ThemeCubit).
+          const ThemeToggleButton(),
         ],
       ),
       body: FavoritesMessenger(

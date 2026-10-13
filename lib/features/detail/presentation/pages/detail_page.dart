@@ -11,6 +11,7 @@ import "package:infinite_image_gallery_pixabay/features/favorites/presentation/b
 import "package:infinite_image_gallery_pixabay/features/favorites/presentation/bloc/favorites_event.dart";
 import "package:infinite_image_gallery_pixabay/features/favorites/presentation/widgets/favorites_listener.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/entities/photo.dart";
+import "package:infinite_image_gallery_pixabay/features/theme/presentation/widgets/theme_toggle_button.dart";
 import "package:infinite_image_gallery_pixabay/injection_container.dart";
 import "package:url_launcher/url_launcher.dart";
 
@@ -78,6 +79,7 @@ class _DetailView extends StatelessWidget {
         appBar: AppBar(
           title: const Text(S.detailTitle),
           actions: <Widget>[
+            const ThemeToggleButton(),
             IconButton(
               tooltip: S.share,
               icon: const Icon(Icons.share_outlined),

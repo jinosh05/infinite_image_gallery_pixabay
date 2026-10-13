@@ -20,6 +20,7 @@ import "package:infinite_image_gallery_pixabay/features/gallery/domain/repositor
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/bloc/gallery_bloc.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/pages/gallery_page.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/widgets/photo_tile.dart";
+import "package:infinite_image_gallery_pixabay/features/theme/presentation/bloc/theme_cubit.dart";
 import "package:infinite_image_gallery_pixabay/injection_container.dart";
 import "package:infinite_scroll_pagination/infinite_scroll_pagination.dart";
 import "package:mocktail/mocktail.dart";
@@ -43,6 +44,7 @@ Future<void> pumpFrames(  WidgetTester tester, {
 void main() {
   late MockGetPhotos mockGetPhotos;
   late MockFavoritesRepository mockFavRepo;
+  late ThemeCubit themeCubit;
 
   setUpAll(() {
     registerFallbackValue(const GalleryParams());
@@ -51,9 +53,10 @@ void main() {
     );
   });
 
-  setUp(() {
+  setUp(() async {
     mockGetPhotos = MockGetPhotos();
     mockFavRepo = MockFavoritesRepository();
+    themeCubit = await createTestThemeCubit();
     when(() => mockFavRepo.getFavorites()).thenAnswer(
       (_) async => const Right<Failure, List<Photo>>(<Photo>[]),
     );
@@ -74,10 +77,13 @@ void main() {
     await tester.pumpWidget(
       BlocProvider<FavoritesBloc>(
         create: (_) => FavoritesBloc(repository: mockFavRepo),
-        child: MaterialApp(
-          home: BlocProvider<GalleryBloc>(
-            create: (_) => GalleryBloc(getPhotos: mockGetPhotos, perPage: 20),
-            child: const GalleryPage(),
+        child: BlocProvider<ThemeCubit>.value(
+          value: themeCubit,
+          child: MaterialApp(
+            home: BlocProvider<GalleryBloc>(
+              create: (_) => GalleryBloc(getPhotos: mockGetPhotos, perPage: 20),
+              child: const GalleryPage(),
+            ),
           ),
         ),
       ),
@@ -215,6 +221,28 @@ void main() {
 
       verify(() => mockFavRepo.toggleFavorite(any())).called(1);
       expect(find.text(S.favoriteAdded), findsOneWidget);
+    });
+  });
+
+  group("GalleryPage theme", () {
+    testWidgets("toggle cycles system → light → dark",
+        (WidgetTester tester) async {
+      stubGalleryPages(
+        mockGetPhotos,
+        <int, List<Photo>>{1: samplePhotos(6)},
+        totalHits: 6,
+      );
+
+      await pumpGallery(tester);
+      expect(find.byTooltip("Theme: system"), findsOneWidget);
+
+      await tester.tap(find.byTooltip("Theme: system"));
+      await pumpFrames(tester);
+      expect(themeCubit.state, ThemeMode.light);
+
+      await tester.tap(find.byTooltip("Theme: light"));
+      await pumpFrames(tester);
+      expect(themeCubit.state, ThemeMode.dark);
     });
   });
 

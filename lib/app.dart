@@ -8,16 +8,17 @@ import "package:infinite_image_gallery_pixabay/features/favorites/presentation/b
 import "package:infinite_image_gallery_pixabay/features/favorites/presentation/bloc/favorites_event.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/bloc/gallery_bloc.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/presentation/pages/gallery_page.dart";
+import "package:infinite_image_gallery_pixabay/features/theme/presentation/bloc/theme_cubit.dart";
 import "package:infinite_image_gallery_pixabay/injection_container.dart";
 
 /// Root widget. Owns [MaterialApp] + responsive bootstrap ([App.init]).
 ///
 /// Provider scope is deliberate:
-/// - [FavoritesBloc] lives ABOVE [MaterialApp] (global singleton): every
-///   route (gallery, detail, favorites) shares one instance. Started once
-///   here, so persisted favorites load at launch.
+/// - [FavoritesBloc] + [ThemeCubit] live ABOVE [MaterialApp] (global
+///   singletons): every route shares them. Favorites load at launch;
+///   `themeMode` rebuilds the app via [BlocBuilder].
 /// - [GalleryBloc] is per-page (factory), provided with the home route.
-///   (ThemeCubit joins the global set in Phase 5.)
+/// - [DownloadCubit] is per-detail-page (factory), provided by DetailPage.
 class GalleryApp extends StatefulWidget {
   const GalleryApp({super.key});
 
@@ -32,16 +33,24 @@ class _GalleryAppState extends State<GalleryApp> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<FavoritesBloc>(
-      create: (_) =>
-          sl<FavoritesBloc>()..add(const FavoritesStarted()),
-      child: MaterialApp(
-        title: S.appName,
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
-        home: _Bootstrap(onReady: _onCoreReady),
+    return MultiBlocProvider(
+      providers: <BlocProvider<dynamic>>[
+        BlocProvider<FavoritesBloc>(
+          create: (_) => sl<FavoritesBloc>()..add(const FavoritesStarted()),
+        ),
+        BlocProvider<ThemeCubit>(
+          create: (_) => sl<ThemeCubit>(),
+        ),
+      ],
+      child: BlocBuilder<ThemeCubit, ThemeMode>(
+        builder: (BuildContext context, ThemeMode mode) => MaterialApp(
+          title: S.appName,
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: mode,
+          home: _Bootstrap(onReady: _onCoreReady),
+        ),
       ),
     );
   }

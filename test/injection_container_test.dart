@@ -8,6 +8,7 @@ import "package:infinite_image_gallery_pixabay/features/detail/presentation/cubi
 import "package:infinite_image_gallery_pixabay/features/favorites/data/datasources/favorites_local_data_source.dart";
 import "package:infinite_image_gallery_pixabay/features/favorites/domain/repositories/favorites_repository.dart";
 import "package:infinite_image_gallery_pixabay/features/favorites/presentation/bloc/favorites_bloc.dart";
+import "package:infinite_image_gallery_pixabay/features/theme/presentation/bloc/theme_cubit.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/data/datasources/gallery_remote_data_source.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/repositories/gallery_repository.dart";
 import "package:infinite_image_gallery_pixabay/features/gallery/domain/use_cases/get_photos.dart";
@@ -74,5 +75,12 @@ void main() {
       identical(sl<FavoritesBloc>(), sl<FavoritesBloc>()),
       isTrue,
     );
+  });
+
+  test("resolves the theme cubit as a singleton", () async {
+    await initDependencies();
+
+    expect(sl<ThemeCubit>(), isNotNull);
+    expect(identical(sl<ThemeCubit>(), sl<ThemeCubit>()), isTrue);
   });
 }
