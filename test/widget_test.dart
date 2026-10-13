@@ -1,30 +1,28 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-
-import 'package:infinite_image_gallery_pixabay/main.dart';
+// Bootstrap smoke test: app boots with/without an API key.
+import "package:flutter/material.dart";
+import "package:flutter_dotenv/flutter_dotenv.dart";
+import "package:flutter_test/flutter_test.dart";
+import "package:infinite_image_gallery_pixabay/app.dart";
+import "package:infinite_image_gallery_pixabay/core/constants/app_strings.dart";
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  testWidgets("shows key-missing guidance when .env has no key",
+      (WidgetTester tester) async {
+    dotenv.loadFromString(envString: "SOME_OTHER_VAR=1");
+    await tester.pumpWidget(const GalleryApp());
+    await tester.pumpAndSettle();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    expect(find.text(S.appName), findsWidgets);
+    expect(find.text("API key missing"), findsOneWidget);
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  testWidgets("shows gallery placeholder when a key exists",
+      (WidgetTester tester) async {
+    dotenv.loadFromString(envString: "PIXABAY_API_KEY=TEST_KEY");
+    await tester.pumpWidget(const GalleryApp());
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.byIcon(Icons.photo_library_outlined), findsOneWidget);
+    expect(find.text(S.galleryTitle), findsOneWidget);
   });
 }
